@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAHEL - Dashboard PDG Confidentiel</title>
+    <style>
+        /* RESET ET BASE */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .title {
+            font-size: 2.8rem;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        /* GRID DE STATISTIQUES */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 18px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(52, 152, 219, 0.5);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card h3 {
+            color: #3498db;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card h3::before {
+            font-size: 1.3rem;
+        }
+        
+        /* ITEMS DE STATISTIQUES */
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transition: background 0.2s;
+        }
+        
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #2ecc71;
+            text-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
+        }
+        
+        .stat-unit {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 5px;
+        }
+        
+        /* SECTION RECHERCHE */
+        .search-section {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 18px;
+            padding: 35px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .search-title {
+            color: #f1c40f;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 18px 25px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            font-size: 1.1rem;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .search-btn {
+            padding: 18px 40px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f639b);
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .search-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* RÉSULTATS */
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .result-card {
+            background: rgba(46, 204, 113, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .result-error {
+            background: rgba(231, 76, 60, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 25px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .timestamp {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+        
+        /* LOADING */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #3498db;
+            font-size: 1.2rem;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .search-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+        }
+        
+        /* ALERTES */
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .alert-warning {
+            background: rgba(241, 196, 15, 0.15);
+            border: 1px solid rgba(241, 196, 15, 0.3);
+            color: #f1c40f;
+        }
+        
+        .alert-success {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        
+        .alert-error {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+
+        .alert-info {
+            background: rgba(52, 152, 219, 0.15);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- EN-TÊTE -->
+        <div class="header">
+            <h1 class="title">🚗 ZAHEL - DASHBOARD PDG</h1>
+            <div class="badge">🔒 CONFIDENTIEL - ACCÈS RESTREINT AU PDG</div>
+            <p id="last-update">Chargement des données en temps réel...</p>
+        </div>
+        
+        <!-- ALERTE DE CONNEXION -->
+        <div id="connection-alert" class="alert alert-warning" style="display: none;">
+            <span>🔍</span>
+            <div>
+                <strong>Connexion en cours...</strong>
+                <p>Vérification de votre identité PDG</p>
+            </div>
+        </div>
+        
+        <!-- STATISTIQUES -->
+        <div id="loading-stats" class="loading">
+            <div class="spinner"></div>
+            <p>Chargement des statistiques ZAHEL...</p>
+        </div>
+        
+        <div id="stats-container" style="display: none;">
+            <div class="stats-grid">
+                <!-- CARTE UTILISATEURS -->
+                <div class="card">
+                    <h3>👥 UTILISATEURS ACTIFS</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Conducteurs actifs</span>
+                        <div>
+                            <span class="stat-value" id="conducteurs-actifs">0</span>
+                            <span class="stat-unit">/</span>
+                            <span class="stat-value" id="conducteurs-total">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Clients actifs</span>
+                        <div>
+                            <span class="stat-value" id="clients-actifs">0</span>
+                            <span class="stat-unit">/</span>
+                            <span class="stat-value" id="clients-total">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Utilisateurs suspendus</span>
+                        <span class="stat-value" id="utilisateurs-suspendus">0</span>
+                    </div>
+                </div>
+                
+                <!-- CARTE COURSES -->
+                <div class="card">
+                    <h3>🚗 ACTIVITÉ DES COURSES</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Total courses</span>
+                        <span class="stat-value" id="courses-total">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Courses terminées</span>
+                        <span class="stat-value" id="courses-terminees">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Courses annulées</span>
+                        <span class="stat-value" id="courses-annulees">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Taux d'annulation</span>
+                        <span class="stat-value" id="taux-annulation">0%</span>
+                    </div>
+                </div>
+                
+                <!-- CARTE FINANCES -->
+                <div class="card">
+                    <h3>💰 PERFORMANCE FINANCIÈRE</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Revenus totaux</span>
+                        <span class="stat-value" id="revenus-totaux">0</span>
+                        <span class="stat-unit">KMF</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Taxes collectées</span>
+                        <span class="stat-value" id="taxes-totales">0</span>
+                        <span class="stat-unit">KMF</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Productivité</span>
+                        <span class="stat-value" id="productivite">0.0</span>
+                        <span class="stat-unit">courses/cond.</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Valeur moyenne</span>
+                        <span class="stat-value" id="valeur-moyenne">0</span>
+                        <span class="stat-unit">KMF/course</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION RECHERCHE -->
+            <div class="search-section">
+                <h2 class="search-title">🔍 RECHERCHE RAPIDE CONDUCTEUR</h2>
+                <p>Recherchez un conducteur par son immatriculation pour accéder à toutes ses informations (urgence PDG).</p>
+                
+                <div class="search-box">
+                    <input type="text" 
+                           class="search-input" 
+                           id="immatricule-input" 
+                           placeholder="Ex: ZH-327KYM"
+                           autocomplete="off">
+                    <button class="search-btn" onclick="rechercherConducteur()">
+                        <span>🔎</span>
+                        Rechercher
+                    </button>
+                </div>
+                
+                <div id="resultat-recherche" class="results">
+                    <!-- Les résultats apparaîtront ici -->
+                </div>
+            </div>
+        </div>
+
+<!-- ========== SECTION GESTION DES ABONNEMENTS ========== -->
+<div class="search-section" id="abonnements-section">
+    <h2 class="search-title">
+        <span>📦</span>
+        GESTION DES ABONNEMENTS CONDUCTEURS
+    </h2>
+    
+    <!-- ALERTE RÉSUMÉ -->
+    <div class="alert alert-info" style="margin-bottom: 20px; background: rgba(52, 152, 219, 0.15);">
+        <span>📊</span>
+        <div>
+            <strong>Aperçu des abonnements</strong>
+            <p><span id="abonnements-resume">Chargement...</span></p>
+        </div>
+    </div>
+    
+    <!-- CONFIGURATION GÉNÉRALE (MODIFIABLE) -->
+    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; margin-bottom: 30px;">
+        <h3 style="color: #f1c40f; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            ⚙️ CONFIGURATION DES ABONNEMENTS
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
+                    Forfait par défaut
+                </label>
+                <input type="number" id="config-forfait" value="50" min="1" max="500"
+                       style="width: 100%; padding: 12px; border-radius: 8px; 
+                              background: rgba(255,255,255,0.1); color: white; 
+                              border: 1px solid #3498db;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
+                    Prix par course (KMF)
+                </label>
+                <input type="number" id="config-prix" value="1000" min="100" step="100"
+                       style="width: 100%; padding: 12px; border-radius: 8px; 
+                              background: rgba(255,255,255,0.1); color: white; 
+                              border: 1px solid #3498db;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
+                    Seuil d'alerte (courses)
+                </label>
+                <input type="number" id="config-seuil" value="5" min="1" max="20"
+                       style="width: 100%; padding: 12px; border-radius: 8px; 
+                              background: rgba(255,255,255,0.1); color: white; 
+                              border: 1px solid #3498db;">
+            </div>
+        </div>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="sauvegarderConfigAbonnements()" class="search-btn" 
+                    style="background: linear-gradient(135deg, #f1c40f, #e67e22);">
+                <span>💾</span>
+                SAUVEGARDER CONFIGURATION
+            </button>
+        </div>
+    </div>
+    
+    <!-- LISTE DES ABONNEMENTS -->
+    <div style="margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="color: #3498db;">📋 LISTE DES ABONNEMENTS</h3>
+            <button onclick="chargerAbonnements()" class="search-btn" 
+                    style="padding: 10px 20px; background: #3498db;">
+                <span>🔄</span>
+                Rafraîchir
+            </button>
+        </div>
+        
+        <div id="abonnements-container">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Chargement des abonnements...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== SECTION VÉRIFICATIONS WHATSAPP ========== -->
+<div class="search-section" id="whatsapp-section">
+    <h2 class="search-title">
+        <span>📱</span>
+        CONDUCTEURS EN ATTENTE DE VÉRIFICATION WHATSAPP
+    </h2>
+    
+    <!-- Alertes -->
+    <div class="alert alert-warning" style="margin-bottom: 20px;">
+        <span>⚠️</span>
+        <div>
+            <strong>Vérifications en attente</strong>
+            <p>Vous avez <span id="count-whatsapp">0</span> conducteur(s) à vérifier</p>
+        </div>
+    </div>
+    
+    <!-- Container pour la liste -->
+    <div id="whatsapp-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Chargement des demandes de vérification...</p>
+        </div>
+    </div>
+</div>
+        
+        <!-- ========== SECTION GESTION DES AMENDES ========== -->
+<div class="search-section" id="amendes-section">
+    <h2 class="search-title">
+        <span>💰</span>
+        GESTION DES AMENDES EN ATTENTE
+    </h2>
+    
+    <!-- Alertes -->
+    <div class="alert alert-warning" style="margin-bottom: 20px;">
+        <span>⚠️</span>
+        <div>
+            <strong>Amendes à traiter</strong>
+            <p>Vous avez <span id="count-amendes">0</span> amendes en attente pour un total de 
+               <span id="total-amendes">0</span> KMF</p>
+        </div>
+    </div>
+    
+    <!-- Boutons de filtrage -->
+    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <button class="search-btn" onclick="chargerAmendes('en_attente')">
+            <span>🔄</span>
+            Amendes en attente
+        </button>
+        <button class="search-btn" onclick="chargerAmendes('payee')" 
+                style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
+            <span>✅</span>
+            Amendes payées
+        </button>
+        <button class="search-btn" onclick="chargerAmendes('annulee')"
+                style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+            <span>❌</span>
+            Amendes annulées
+        </button>
+    </div>
+    
+    <!-- Container pour le tableau -->
+    <div id="amendes-container" class="results">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Chargement des amendes...</p>
+        </div>
+    </div>
+    
+    <!-- Statistiques -->
+    <div id="stats-amendes" style="display: none; margin-top: 30px; padding: 20px; 
+          background: rgba(255, 255, 255, 0.05); border-radius: 10px;">
+        <h3>📊 Statistiques amendes</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <strong>Total encaissé</strong>
+                <div style="font-size: 1.8em; color: #2ecc71;">
+                    <span id="stats-total-paye">0</span> KMF
+                </div>
+            </div>
+            <div>
+                <strong>En attente</strong>
+                <div style="font-size: 1.8em; color: #f39c12;">
+                    <span id="stats-en-attente">0</span> amendes
+                </div>
+            </div>
+            <div>
+                <strong>Montant total</strong>
+                <div style="font-size: 1.8em; color: #3498db;">
+                    <span id="stats-montant-total">0</span> KMF
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- PIED DE PAGE -->
+        <div class="footer">
+            <p>© 2024 ZAHEL - Système de transport intelligent. Tous droits réservés.</p>
+            <p>Dernière mise à jour: <span id="timestamp" class="timestamp">--:--:--</span> | 
+               <span id="auto-refresh">Rafraîchissement automatique: <span id="countdown">30</span>s</span></p>
+            <p style="margin-top: 15px;">
+                <button onclick="chargerStatistiques()" style="padding: 10px 20px; background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; border-radius: 8px; cursor: pointer;">
+                    🔄 Rafraîchir manuellement
+                </button>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_URL = 'http://localhost:5001/api/admin/statistiques';
+        const TOKEN = new URLSearchParams(window.location.search).get('token');
+        let countdownInterval;
+        
+        // ==================== INITIALISATION ====================
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!TOKEN) {
+                showError('Token PDG manquant. Veuillez vous reconnecter.');
+                return;
+            }
+            
+            document.getElementById('connection-alert').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('connection-alert').style.display = 'none';
+                chargerStatistiques();
+                startAutoRefresh();
+            }, 1500);
+        });
+        
+        // ==================== FONCTIONS PRINCIPALES ====================
+        async function chargerStatistiques() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': TOKEN
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showError('Token PDG invalide. Veuillez rafraîchir la page.');
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Erreur ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    afficherStatistiques(data);
+                    showSuccess('Statistiques mises à jour avec succès!');
+
+                    chargerAbonnements(); 
+
+                    // ✅ AJOUTER CETTE LIGNE ICI
+                    chargerVerificationsWhatsApp();
+                } else {
+                    showError('Erreur dans les données reçues.');
+                }
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                showError(`Connexion impossible: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function afficherStatistiques(data) {
+            const stats = data.statistiques;
+            
+            // Mettre à jour l'heure
+            const timeStr = data.timestamp.substring(11, 19);
+            document.getElementById('last-update').textContent = 
+                `Dernière mise à jour: ${timeStr}`;
+            document.getElementById('timestamp').textContent = timeStr;
+            
+            // Utilisateurs
+            document.getElementById('conducteurs-actifs').textContent = stats.conducteurs.actifs;
+            document.getElementById('conducteurs-total').textContent = stats.conducteurs.total;
+            document.getElementById('clients-actifs').textContent = stats.clients.actifs;
+            document.getElementById('clients-total').textContent = stats.clients.total;
+            document.getElementById('utilisateurs-suspendus').textContent = 
+                (stats.conducteurs.total - stats.conducteurs.actifs) + 
+                (stats.clients.total - stats.clients.actifs);
+            
+            // Courses
+            document.getElementById('courses-total').textContent = stats.courses.total;
+            document.getElementById('courses-terminees').textContent = stats.courses.terminees;
+            document.getElementById('courses-annulees').textContent = stats.courses.annulees;
+            document.getElementById('taux-annulation').textContent = stats.courses.taux_annulation + '%';
+            
+            // Finances
+            document.getElementById('revenus-totaux').textContent = 
+                formatMoney(stats.finances.revenus_totaux);
+            document.getElementById('taxes-totales').textContent = 
+                formatMoney(stats.finances.taxes_totales);
+            
+            // Calculs supplémentaires
+            const productivite = stats.conducteurs.total > 0 ? 
+                (stats.courses.terminees / stats.conducteurs.total).toFixed(1) : '0.0';
+            document.getElementById('productivite').textContent = productivite;
+            
+            const valeurMoyenne = stats.courses.terminees > 0 ? 
+                Math.round(stats.finances.revenus_totaux / stats.courses.terminees) : 0;
+            document.getElementById('valeur-moyenne').textContent = formatMoney(valeurMoyenne);
+            
+            // Afficher le contenu
+            document.getElementById('stats-container').style.display = 'block';
+        }
+        
+        async function rechercherConducteur() {
+            const immatricule = document.getElementById('immatricule-input').value.trim();
+            const resultDiv = document.getElementById('resultat-recherche');
+            
+            if (!immatricule) {
+                resultDiv.innerHTML = `
+                    <div class="result-error">
+                        <strong>❌ Erreur</strong>
+                        <p>Veuillez entrer une immatriculation valide.</p>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Recherche du conducteur ${immatricule}...</p>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`http://localhost:5001/api/admin/conducteur/${immatricule}`, {
+                    headers: { 'Authorization': TOKEN }
+                });
+                
+                console.log('Status de l\'API:', response.status);
+                
+                if (response.status === 404) {
+                    resultDiv.innerHTML = `
+                    <div class="result-error">
+                        <strong>🔍 Conducteur non trouvé</strong>
+                        <p>L'immatriculation <strong>${immatricule}</strong> n'existe pas dans la base de données.</p>
+                    </div>`;
+                    
+                } else if (response.ok) {
+                    const data = await response.json();
+                    const conducteur = data.conducteur;
+                    
+                    const dateCreation = conducteur.dates.creation ? 
+                        new Date(conducteur.dates.creation).toLocaleDateString('fr-FR') : 'N/A';
+                    
+                    resultDiv.innerHTML = `
+                    <div class="result-card">
+                        <strong>✅ CONDUCTEUR TROUVÉ</strong>
+                        <div style="margin-top: 15px;">
+                            <p><strong>👤 Nom :</strong> ${conducteur.nom}</p>
+                            <p><strong>🔢 Immatricule :</strong> ${conducteur.immatricule}</p>
+                            <p><strong>📞 Téléphone :</strong> ${conducteur.telephone}</p>
+                            <p><strong>📧 Email :</strong> ${conducteur.email || 'N/A'}</p>
+                            <p><strong>🇰🇲 Nationalité :</strong> ${conducteur.nationalite || 'N/A'}</p>
+                            <p><strong>🆔 N° Identité :</strong> ${conducteur.numero_identite || 'N/A'}</p>
+                            
+                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <strong>🚗 VÉHICULE :</strong>
+                                <p style="margin: 5px 0 0 15px;">
+                                    ${conducteur.vehicule.marque} ${conducteur.vehicule.modele}<br>
+                                    Couleur: ${conducteur.vehicule.couleur}<br>
+                                    Plaque: ${conducteur.vehicule.plaque}<br>
+                                    Catégorie: ${conducteur.vehicule.categorie}
+                                </p>
+                            </div>
+                            
+                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <strong>📊 PERFORMANCE :</strong>
+                                <p style="margin: 5px 0 0 15px;">
+                                    Courses effectuées: <strong>${conducteur.performance.courses_effectuees}</strong><br>
+                                    Gains totaux: <strong>${formatMoney(conducteur.performance.gains_totaux)} KMF</strong>
+                                </p>
+                            </div>
+                            
+                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <strong>📈 STATUT :</strong>
+                                <p style="margin: 5px 0 0 15px;">
+                                    Compte: ${conducteur.statut.suspendu ? '❌ SUSPENDU' : '✅ ACTIF'}<br>
+                                    Disponible: ${conducteur.statut.disponible ? '✅ OUI' : '❌ NON'}<br>
+                                    En course: ${conducteur.statut.en_course ? '✅ OUI' : '❌ NON'}
+                                </p>
+                            </div>
+                            
+                            <p><strong>📅 Inscrit depuis :</strong> ${dateCreation}</p>
+                        </div>
+                    </div>`;
+                    
+                } else {
+                    resultDiv.innerHTML = `
+                    <div class="result-error">
+                        <strong>⚠️ Erreur ${response.status}</strong>
+                        <p>Impossible de récupérer les informations du conducteur.</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">
+                            ${response.statusText}
+                        </p>
+                    </div>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                <div class="result-error">
+                    <strong>⚠️ Erreur de connexion</strong>
+                    <p>Impossible de contacter le serveur API.</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">
+                        Vérifiez que le serveur ZAHEL est démarré.<br>
+                        Détail: ${error.message}
+                    </p>
+                </div>`;
+            }
+        }
+        
+        // ==================== FONCTIONS UTILITAIRES ====================
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('fr-FR').format(Math.round(amount * 100) / 100);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading-stats').style.display = show ? 'block' : 'none';
+            if (!show) {
+                document.getElementById('stats-container').style.display = 'block';
+            }
+        }
+        
+        function showError(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-error';
+            alertDiv.innerHTML = `
+                <span>❌</span>
+                <div>
+                    <strong>Erreur</strong>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.getElementById('stats-container'));
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+        
+        function showSuccess(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success';
+            alertDiv.innerHTML = `
+                <span>✅</span>
+                <div>
+                    <strong>Succès</strong>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.getElementById('stats-container'));
+            setTimeout(() => alertDiv.remove(), 3000);
+        }
+        
+        function startAutoRefresh() {
+            let countdown = 30;
+            const countdownElement = document.getElementById('countdown');
+            
+            countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    countdown = 30;
+                    chargerStatistiques();
+                }
+            }, 1000);
+        }
+        
+        // Empêcher la touche Entrée de soumettre le formulaire
+        document.getElementById('immatricule-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                rechercherConducteur();
+            }
+        });
+        
+        // ==================== GESTION DES AMENDES ====================
+        let amendesData = [];
+        
+        async function chargerAmendes(statut = 'en_attente') {
+            console.log('🔍 chargerAmendes appelée avec statut:', statut);
+            const container = document.getElementById('amendes-container');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Chargement des amendes ${statut}...</p>
+                </div>
+            `;
+            
+            try {
+            console.log('🌐 Envoi requête à l\'API...');
+                const response = await fetch(`http://localhost:5001/api/amendes?statut=${statut}`, {
+                    headers: { 'Authorization': TOKEN }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erreur ${response.status}`);
+                }
+                
+                const data = await response.json();
+                amendesData = data.amendes;
+                
+                // Mettre à jour les compteurs
+                document.getElementById('count-amendes').textContent = data.total;
+                document.getElementById('total-amendes').textContent = 
+                    formatMoney(data.total_montant);
+                
+                // Afficher les amendes
+                 function afficherAmendes(amendes, statut) {
+    console.log('🎯 afficherAmendes appelée avec', amendes.length, 'amendes');
+    console.log('Première amende:', amendes[0]);
+    
+    const container = document.getElementById('amendes-container');
+    console.log('Container:', container);
+    
+    if (!amendes || amendes.length === 0) {
+        container.innerHTML = `
+            <div class="result-card">
+                <strong>📭 Aucune amende ${statut}</strong>
+                <p>Base de données vide pour ce statut.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Version SIMPLE pour tester
+    let html = `
+        <div style="background: rgba(52, 152, 219, 0.1); padding: 20px; border-radius: 10px;">
+            <h3 style="color: #3498db; margin-bottom: 15px;">
+                📋 ${amendes.length} AMENDE(S) ${statut.toUpperCase()}
+            </h3>
+    `;
+    
+    amendes.forEach((amende, index) => {
+        html += `
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: #3498db;">#${amende.id}</strong>
+                        <span style="color: white; margin-left: 10px;">${amende.nom_utilisateur || 'Utilisateur'}</span>
+                    </div>
+                    <div style="color: #e74c3c; font-weight: bold;">
+                        ${formatMoney(amende.montant)} KMF
+                    </div>
+                </div>
+                <div style="color: rgba(255,255,255,0.8); margin-top: 5px;">
+                    ${amende.raison.substring(0, 80)}${amende.raison.length > 80 ? '...' : ''}
+                </div>
+                <div style="margin-top: 10px;">
+                    <button onclick="payerAmendeDetails(${amende.id})" 
+                            style="padding: 5px 10px; background: #2ecc71; color: white; 
+                                   border: none; border-radius: 4px; margin-right: 5px;">
+                        💰 Payer
+                    </button>
+                    <button onclick="voirDetailsComplets(${amende.id})"
+                            style="padding: 5px 10px; background: #3498db; color: white; 
+                                   border: none; border-radius: 4px;">
+                        📄 Détails
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+    
+    console.log('✅ HTML généré et inséré');
+}
+
+                // =============== FONCTION POUR PAYER AVEC DÉTAILS ===============
+function payerAmendeDetails(amendeId) {
+    // Créer une modal pour saisir les détails de paiement
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
+                    max-width: 500px; width: 90%;">
+            <h3 style="color: #3498db; margin-bottom: 20px;">
+                💰 Payer l'amende #${amendeId}
+            </h3>
+            
+            <form id="form-paiement-amende">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: white;">
+                        Mode de paiement
+                    </label>
+                    <select name="mode_paiement" style="width: 100%; padding: 10px; 
+                            border-radius: 5px; background: rgba(255,255,255,0.1); 
+                            color: white; border: 1px solid #3498db;">
+                        <option value="mvola">Mvola</option>
+                        <option value="orange_money">Orange Money</option>
+                        <option value="cash">Espèces</option>
+                        <option value="carte">Carte bancaire</option>
+                        <option value="via_course">Via prochaine course</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: white;">
+                        Référence/N° de transaction
+                    </label>
+                    <input type="text" name="reference" style="width: 100%; padding: 10px;
+                           border-radius: 5px; background: rgba(255,255,255,0.1); 
+                           color: white; border: 1px solid #3498db;"
+                           placeholder="Ex: MV-123456789">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; color: white;">
+                        Attacher à une course ?
+                    </label>
+                    <div style="display: flex; gap: 15px;">
+                        <label style="color: white;">
+                            <input type="radio" name="attacher_course" value="oui"> Oui
+                        </label>
+                        <label style="color: white;">
+                            <input type="radio" name="attacher_course" value="non" checked> Non
+                        </label>
+                    </div>
+                    <small style="color: rgba(255,255,255,0.7);">
+                        Si oui, l'amende sera ajoutée au prix de la prochaine course du client
+                    </small>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 25px;">
+                    <button type="button" onclick="this.closest('div[style*=\"position: fixed\"]').remove()"
+                            style="padding: 10px 20px; background: #e74c3c; color: white;
+                                   border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                        Annuler
+                    </button>
+                    <button type="button" onclick="soumettrePaiementAmende(${amendeId})"
+                            style="padding: 10px 20px; background: #2ecc71; color: white;
+                                   border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                        Confirmer paiement
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// =============== SOUMETTRE LE PAIEMENT ===============
+async function soumettrePaiementAmende(amendeId) {
+    const form = document.getElementById('form-paiement-amende');
+    const formData = {
+        mode_paiement: form.mode_paiement.value,
+        reference: form.reference.value,
+        attacher_course: form.attacher_course.value
+    };
+    
+    // Fermer la modal
+    document.querySelector('div[style*="position: fixed"]').remove();
+    
+    try {
+        // Générer un token de paiement
+        const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                token_paiement: tokenPaiement,
+                mode_paiement: formData.mode_paiement,
+                reference: formData.reference,
+                attacher_course: formData.attacher_course === 'oui'
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showSuccess(`Amende #${amendeId} payée ! Réçu: ${result.receipt}`);
+            
+            // Recharger la liste des amendes
+            chargerAmendes('en_attente');
+            
+            // Si attaché à une course, montrer un message spécial
+            if (formData.attacher_course === 'oui') {
+                setTimeout(() => {
+                    showSuccess('✅ Amende attachée à la prochaine course du client');
+                }, 1000);
+            }
+        } else {
+            const error = await response.json();
+            showError(`Erreur: ${error.error}`);
+        }
+    } catch (error) {
+        showError(`Erreur réseau: ${error.message}`);
+    }
+}
+
+// =============== ATTACHER À UNE COURSE ===============
+function attacherCourseAmende(amendeId) {
+    // Chercher l'amende dans les données
+    const amende = amendesData.find(a => a.id === amendeId);
+    if (!amende) return;
+    
+    // Vérifier si c'est un client
+    if (amende.utilisateur_type !== 'client') {
+        showError('❌ Seuls les amendes clients peuvent être attachées à une course');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
+                    max-width: 500px; width: 90%;">
+            <h3 style="color: #3498db; margin-bottom: 20px;">
+                🚗 Attacher l'amende à une course
+            </h3>
+            
+            <p style="color: white; margin-bottom: 20px;">
+                <strong>Amende #${amendeId}</strong><br>
+                Client: ${amende.nom_utilisateur}<br>
+                Montant: ${formatMoney(amende.montant)} KMF
+            </p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: white;">
+                    Choisir l'option
+                </label>
+                <select id="option-attachement" style="width: 100%; padding: 10px; 
+                        border-radius: 5px; background: rgba(255,255,255,0.1); 
+                        color: white; border: 1px solid #3498db;">
+                    <option value="prochaine_course">Prochaine course du client</option>
+                    <option value="course_existante">Course existante</option>
+                    <option value="reduction_50">Réduction 50% sur la course</option>
+                </select>
+            </div>
+            
+            <div id="course-selection" style="display: none; margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: white;">
+                    Sélectionner une course
+                </label>
+                <select style="width: 100%; padding: 10px; 
+                        border-radius: 5px; background: rgba(255,255,255,0.1); 
+                        color: white; border: 1px solid #3498db;">
+                    <option value="">Chargement des courses...</option>
+                </select>
+            </div>
+            
+            <div style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
+                <strong>Fonctionnement :</strong><br>
+                1. Le client sera notifié qu'il peut payer via sa prochaine course<br>
+                2. Le prix de la course sera augmenté du montant de l'amende<br>
+                3. Le chauffeur récupérera l'amende pour la compagnie<br>
+                4. L'entreprise suivra cette amende dans la section "Amendes chauffeurs"
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button type="button" onclick="this.closest('div[style*=\"position: fixed\"]').remove()"
+                        style="padding: 10px 20px; background: #e74c3c; color: white;
+                               border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                    Annuler
+                </button>
+                <button type="button" onclick="confirmerAttachement(${amendeId})"
+                        style="padding: 10px 20px; background: #9b59b6; color: white;
+                               border: none; border-radius: 5px; cursor: pointer; flex: 1;">
+                    Confirmer l'attachement
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Afficher/masquer la sélection de course
+    document.getElementById('option-attachement').addEventListener('change', function(e) {
+        document.getElementById('course-selection').style.display = 
+            e.target.value === 'course_existante' ? 'block' : 'none';
+    });
+}
+
+// =============== VOIR DÉTAILS COMPLETS ===============
+function voirDetailsComplets(amendeId) {
+    const amende = amendesData.find(a => a.id === amendeId);
+    if (!amende) return;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        padding: 20px;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
+                    max-width: 800px; max-height: 90vh; overflow-y: auto;
+                    width: 100%;">
+            <h2 style="color: #3498db; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                📄 Détails complets - Amende #${amende.id}
+            </h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                <!-- Colonne gauche -->
+                <div>
+                    <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
+                        👤 INFORMATIONS UTILISATEUR
+                    </h3>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Type:</strong>
+                            <span style="color: white; margin-left: 10px; padding: 3px 8px; 
+                                  background: ${amende.utilisateur_type === 'client' ? '#3498db20' : '#e74c3c20'}; 
+                                  border-radius: 4px;">
+                                ${amende.utilisateur_type.toUpperCase()}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Nom:</strong>
+                            <span style="color: white; margin-left: 10px;">
+                                ${amende.nom_utilisateur || 'Non spécifié'}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Contact:</strong>
+                            <span style="color: white; margin-left: 10px;">
+                                ${amende.contact || 'N/A'}
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #3498db;">ID utilisateur:</strong>
+                            <span style="color: white; margin-left: 10px;">
+                                ${amende.utilisateur_id}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Colonne droite -->
+                <div>
+                    <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
+                        💰 INFORMATIONS FINANCIÈRES
+                    </h3>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Montant:</strong>
+                            <span style="color: #e74c3c; font-size: 1.3em; font-weight: bold; margin-left: 10px;">
+                                ${formatMoney(amende.montant)} KMF
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Statut:</strong>
+                            <span style="color: ${amende.statut === 'en_attente' ? '#f39c12' : 
+                                               amende.statut === 'payee' ? '#2ecc71' : '#e74c3c'}; 
+                                  margin-left: 10px; padding: 3px 8px; 
+                                  background: ${amende.statut === 'en_attente' ? '#f39c1220' : 
+                                               amende.statut === 'payee' ? '#2ecc7120' : '#e74c3c20'}; 
+                                  border-radius: 4px; font-weight: bold;">
+                                ${amende.statut.toUpperCase()}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: #3498db;">Mode paiement:</strong>
+                            <span style="color: white; margin-left: 10px;">
+                                ${amende.mode_paiement || 'Non spécifié'}
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #3498db;">Référence:</strong>
+                            <span style="color: white; margin-left: 10px;">
+                                ${amende.reference || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Raison et dates -->
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
+                    📝 RAISON ET DATES
+                </h3>
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #3498db; display: block; margin-bottom: 5px;">
+                            Raison de l'amende:
+                        </strong>
+                        <div style="color: white; padding: 10px; background: rgba(0,0,0,0.2); 
+                             border-radius: 5px;">
+                            ${amende.raison}
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <strong style="color: #3498db;">Date création:</strong><br>
+                            <span style="color: white;">
+                                ${new Date(amende.date_amende).toLocaleString('fr-FR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                })}
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #3498db;">Date paiement:</strong><br>
+                            <span style="color: white;">
+                                ${amende.date_paiement ? 
+                                    new Date(amende.date_paiement).toLocaleString('fr-FR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : 'Non payée'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Historique associé -->
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
+                    📊 HISTORIQUE ASSOCIÉ
+                </h3>
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                    <div style="color: white; font-style: italic;">
+                        ${amende.attachee_course ? 
+                            '✅ Cette amende est attachée à une course' : 
+                            '❌ Non attachée à une course'}
+                    </div>
+                    ${amende.course_associee ? `
+                    <div style="margin-top: 10px; color: white;">
+                        <strong>Course associée:</strong> ${amende.course_associee}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <!-- Bouton fermer -->
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
+                        style="padding: 10px 30px; background: #e74c3c; color: white; 
+                               border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+                
+                // Charger les statistiques globales
+                chargerStatistiquesAmendes();
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="result-error">
+                        <strong>❌ Erreur de chargement</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function payerAmendeDetails(amendeId) {
+            const amende = amendesData.find(a => a.id === amendeId);
+            if (!amende) {
+                showError('Amende non trouvée');
+                return;
+            }
+            
+            // Créer un formulaire modal détaillé
+            const modalHTML = `
+                <div id="modal-paiement" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                      background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #0c2461; padding: 30px; border-radius: 10px; width: 500px; max-width: 90vw;">
+                        <h2 style="color: #3498db; margin-bottom: 20px;">💰 PAIEMENT D'AMENDE #${amende.id}</h2>
+                        
+                        <!-- Informations amende -->
+                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px;">
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #3498db;">👤 Utilisateur:</strong><br>
+                                <span style="color: white;">${amende.nom_utilisateur || 'Non spécifié'}</span><br>
+                                <small style="color: rgba(255,255,255,0.7);">(${amende.utilisateur_type.toUpperCase()})</small>
+                            </div>
+                            
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #3498db;">💰 Montant:</strong><br>
+                                <span style="color: #e74c3c; font-weight: bold; font-size: 1.2em;">
+                                    ${formatMoney(amende.montant)} KMF
+                                </span>
+                            </div>
+                            
+                            <div>
+                                <strong style="color: #3498db;">📝 Raison:</strong><br>
+                                <span style="color: white;">${amende.raison}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Formulaire de paiement -->
+                        <form id="form-paiement">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; color: white;">📱 Mode de paiement *</label>
+                                <select id="mode-paiement" required
+                                        style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
+                                               background: rgba(255,255,255,0.1); color: white;">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option value="Mvola">Mvola</option>
+                                    <option value="Orange Money">Orange Money</option>
+                                    <option value="Cash">Espèces</option>
+                                    <option value="Virement">Virement bancaire</option>
+                                    <option value="Course">Via course future</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; color: white;">🔢 Numéro/Référence *</label>
+                                <input type="text" id="reference-paiement" required
+                                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
+                                              background: rgba(255,255,255,0.1); color: white;"
+                                       placeholder="Ex: 034 00 00 00 ou REF-123456">
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; margin-bottom: 5px; color: white;">💬 Commentaire (optionnel)</label>
+                                <textarea id="commentaire-paiement" rows="3"
+                                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
+                                              background: rgba(255,255,255,0.1); color: white;"
+                                       placeholder="Note sur le paiement..."></textarea>
+                            </div>
+                            
+                            <!-- Boutons -->
+                            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" onclick="fermerModalPaiement()"
+                                        style="padding: 10px 20px; background: #e74c3c; color: white; 
+                                               border: none; border-radius: 5px; cursor: pointer;">
+                                    ❌ Annuler
+                                </button>
+                                <button type="submit" 
+                                        style="padding: 10px 20px; background: #2ecc71; color: white; 
+                                               border: none; border-radius: 5px; cursor: pointer;">
+                                    ✅ Confirmer le paiement
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            // Ajouter le modal au DOM
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = modalHTML;
+            document.body.appendChild(modalDiv);
+            
+            // Empêcher la fermeture en cliquant à l'extérieur
+            document.getElementById('modal-paiement').addEventListener('click', function(e) {
+                if (e.target.id === 'modal-paiement') {
+                    fermerModalPaiement();
+                }
+            });
+            
+            // Gérer la soumission du formulaire
+            document.getElementById('form-paiement').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const modePaiement = document.getElementById('mode-paiement').value;
+                const reference = document.getElementById('reference-paiement').value;
+                const commentaire = document.getElementById('commentaire-paiement').value;
+                
+                if (!modePaiement || !reference) {
+                    showError('Veuillez remplir tous les champs obligatoires (*)');
+                    return;
+                }
+                
+                // Afficher un indicateur de chargement
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '⏳ Traitement en cours...';
+                submitBtn.disabled = true;
+                
+                try {
+                    const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            token_paiement: tokenPaiement,
+                            mode_paiement: modePaiement,
+                            reference: reference,
+                            commentaire: commentaire,
+                            date_paiement: new Date().toISOString()
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        showSuccess(`
+✅ AMENDE PAYÉE AVEC SUCCÈS !
+
+Détails :
+• Amende #${amendeId}
+• Montant : ${formatMoney(amende.montant)} KMF
+• Mode : ${modePaiement}
+• Référence : ${reference}
+• Reçu : ${result.receipt}
+                        `.trim());
+                        
+                        fermerModalPaiement();
+                        
+                        // Recharger les amendes après 1 seconde
+                        setTimeout(() => {
+                            chargerAmendes('en_attente');
+                            chargerStatistiquesAmendes();
+                        }, 1000);
+                        
+                    } else {
+                        const error = await response.json();
+                        showError(`❌ Erreur: ${error.error || 'Paiement échoué'}`);
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                } catch (error) {
+                    showError(`❌ Erreur de connexion: ${error.message}`);
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+        
+        function fermerModalPaiement() {
+            const modal = document.getElementById('modal-paiement');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function payerAmende(amendeId) {
+            const amende = amendesData.find(a => a.id === amendeId);
+            if (!amende) return;
+            
+            const message = `
+💰 PAIEMENT D'AMENDE
+
+ID: #${amende.id}
+Utilisateur: ${amende.nom_utilisateur || 'N/A'} (${amende.utilisateur_type})
+Montant: ${formatMoney(amende.montant)} KMF
+Raison: ${amende.raison}
+
+Confirmer le paiement ?
+            `.trim();
+            
+            if (!confirm(message)) {
+                return;
+            }
+            
+            // Demander le mode de paiement
+            const modePaiement = prompt('Mode de paiement (Mvola, Orange Money, Cash, etc.) :', 'Mvola');
+            if (!modePaiement) return;
+            
+            // Demander la référence
+            const reference = prompt('Référence du paiement :', `REF-${Date.now()}`);
+            if (!reference) return;
+            
+            try {
+                const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Afficher un indicateur de chargement
+                const button = document.querySelector(`button[onclick*="payerAmende(${amendeId})"]`);
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span>⏳</span> Traitement...';
+                button.disabled = true;
+                
+                const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token_paiement: tokenPaiement,
+                        mode_paiement: modePaiement,
+                        reference: reference
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Mettre à jour l'interface immédiatement
+                    amende.statut = 'payee';
+                    amende.date_paiement = new Date().toISOString();
+                    
+                    showSuccess(`
+✅ AMENDE PAYÉE !
+
+ID: #${amende.id}
+Reçu: ${result.receipt}
+Mode: ${modePaiement}
+Référence: ${reference}
+
+L'amende a été marquée comme payée.
+                    `.trim());
+                    
+                    // Recharger la liste
+                    setTimeout(() => {
+                        chargerAmendes('en_attente');
+                        chargerStatistiquesAmendes();
+                    }, 1000);
+                    
+                } else {
+                    const error = await response.json();
+                    showError(`❌ Erreur: ${error.error || 'Paiement échoué'}`);
+                    
+                    // Réactiver le bouton
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            } catch (error) {
+                showError(`❌ Erreur de connexion: ${error.message}`);
+            }
+        }
+        
+        async function annulerAmende(amendeId) {
+            const amende = amendesData.find(a => a.id === amendeId);
+            if (!amende) return;
+            
+            const message = `
+❌ ANNULATION D'AMENDE
+
+ID: #${amende.id}
+Utilisateur: ${amende.nom_utilisateur || 'N/A'} (${amende.utilisateur_type})
+Montant: ${formatMoney(amende.montant)} KMF
+Raison: ${amende.raison}
+
+Veuillez entrer la raison de l'annulation :
+            `.trim();
+            
+            const raison = prompt(message, 'Erreur dans le système / Paiement déjà effectué');
+            if (!raison) return;
+            
+            // Confirmation finale
+            if (!confirm(`Confirmer l'annulation pour : "${raison.substring(0, 50)}..." ?`)) {
+                return;
+            }
+            
+            try {
+                // Afficher un indicateur de chargement
+                const buttons = document.querySelectorAll(`button[onclick*="annulerAmende(${amendeId})"]`);
+                if (buttons.length > 0) {
+                    const button = buttons[0];
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<span>⏳</span> Traitement...';
+                    button.disabled = true;
+                }
+                
+                const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/annuler`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': TOKEN,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        raison: raison,
+                        annule_par: 'PDG',
+                        date_annulation: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Mettre à jour l'interface immédiatement
+                    amende.statut = 'annulee';
+                    
+                    showSuccess(`
+✅ AMENDE ANNULÉE !
+
+ID: #${amende.id}
+Raison: ${raison.substring(0, 100)}...
+Message: ${result.message}
+                    `.trim());
+                    
+                    // Recharger la liste
+                    setTimeout(() => {
+                        chargerAmendes('en_attente');
+                        chargerStatistiquesAmendes();
+                    }, 1000);
+                    
+                } else {
+                    const error = await response.json();
+                    showError(`❌ Erreur: ${error.error || 'Annulation échouée'}`);
+                    
+                    // Réactiver le bouton
+                    const buttons = document.querySelectorAll(`button[onclick*="annulerAmende(${amendeId})"]`);
+                    if (buttons.length > 0) {
+                        buttons[0].innerHTML = '<span>❌</span> Annuler';
+                        buttons[0].disabled = false;
+                    }
+                }
+            } catch (error) {
+                showError(`❌ Erreur de connexion: ${error.message}`);
+            }
+        }
+        
+        async function chargerStatistiquesAmendes() {
+            try {
+                const response = await fetch('http://localhost:5001/api/admin/statistiques', {
+                    headers: { 'Authorization': TOKEN }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.statistiques;
+                    
+                    // Afficher les statistiques
+                    document.getElementById('stats-total-paye').textContent = 
+                        formatMoney(stats.finances.amendes_payees || 0);
+                    document.getElementById('stats-en-attente').textContent = 
+                        amendesData.length;
+                    document.getElementById('stats-montant-total').textContent = 
+                        formatMoney(amendesData.reduce((sum, a) => sum + a.montant, 0));
+                    
+                    document.getElementById('stats-amendes').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Erreur stats amendes:', error);
+            }
+        }
+        
+        function voirDetailsAmende(amendeId) {
+            const amende = amendesData.find(a => a.id === amendeId);
+            if (!amende) return;
+            
+            const details = `
+                <div class="result-card">
+                    <h3>📄 Détails amende #${amende.id}</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div>
+                            <strong>Type:</strong> ${amende.utilisateur_type}<br>
+                            <strong>Nom:</strong> ${amende.nom_utilisateur}<br>
+                            <strong>Contact:</strong> ${amende.contact}
+                        </div>
+                        <div>
+                            <strong>Montant:</strong> ${formatMoney(amende.montant)} KMF<br>
+                            <strong>Statut:</strong> ${amende.statut}<br>
+                            <strong>Date:</strong> ${new Date(amende.date_amende).toLocaleString('fr-FR')}
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 5px;">
+                        <strong>Raison:</strong><br>
+                        ${amende.raison}
+                    </div>
+                </div>
+            `;
+            
+            // Afficher dans une modal simple
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: #0c2461; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                    ${details}
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="this.parentElement.parentElement.remove()" 
+                                style="padding: 10px 30px; background: #e74c3c; color: white; 
+                                       border: none; border-radius: 5px; cursor: pointer;">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // Charger automatiquement les amendes au chargement de la page
+        setTimeout(() => {
+            if (TOKEN) {
+                chargerAmendes('en_attente');
+            }
+        }, 2000);
+        // ========== VÉRIFICATIONS WHATSAPP ==========
+async function chargerVerificationsWhatsApp() {
+    const container = document.getElementById('whatsapp-container');
+    const countSpan = document.getElementById('count-whatsapp');
+    
+    try {
+        const response = await fetch('/api/admin/verifications/en_attente', {
+            headers: { 'Authorization': TOKEN }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Mettre à jour le compteur
+        countSpan.textContent = data.count;
+        
+        if (data.count === 0) {
+            container.innerHTML = `
+                <div class="result-card" style="text-align: center; padding: 30px;">
+                    <strong style="color: #2ecc71; font-size: 1.2em;">✅ AUCUNE VÉRIFICATION EN ATTENTE</strong>
+                    <p style="margin-top: 10px; color: rgba(255,255,255,0.7);">
+                        Tous les conducteurs sont vérifiés ou en attente d'inscription.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Construire la liste
+        let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+        
+        data.conducteurs.forEach(cond => {
+            const dateInscription = new Date(cond.date_inscription).toLocaleDateString('fr-FR', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            
+            html += `
+                <div class="result-card" style="border-left: 4px solid #25D366;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="background: ${cond.categorie === 'confort' ? '#3498db' : '#9b59b6'}; 
+                                      padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">
+                                    ${cond.categorie.toUpperCase()}
+                                </span>
+                                <strong style="color: #3498db;">${cond.immatricule}</strong>
+                            </div>
+                            
+                            <div style="font-size: 1.2em; margin-bottom: 5px;">
+                                👤 ${cond.nom}
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 5px; margin-bottom: 5px;">
+                                <div>📞 ${cond.telephone}</div>
+                                <div>🚗 ${cond.vehicule}</div>
+                                <div>🎨 ${cond.couleur}</div>
+                                <div>🪪 ${cond.plaque}</div>
+                            </div>
+                            
+                            <div style="color: rgba(255,255,255,0.7); font-size: 0.9em;">
+                                📅 Inscrit le ${dateInscription}
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button onclick="activerConducteur(${cond.id}, '${cond.immatricule}')" 
+                                    style="padding: 12px 20px; background: linear-gradient(135deg, #25D366, #128C7E); 
+                                           color: white; border: none; border-radius: 8px; cursor: pointer; 
+                                           font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                                <span>✅</span>
+                                VÉRIFIER & ACTIVER
+                            </button>
+                            
+                            <button onclick="ouvrirWhatsappAdmin('${cond.telephone}', '${cond.immatricule}', '${cond.categorie}')" 
+                                    style="padding: 12px 20px; background: linear-gradient(135deg, #3498db, #2980b9); 
+                                           color: white; border: none; border-radius: 8px; cursor: pointer; 
+                                           font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                                <span>📱</span>
+                                VOIR SUR WHATSAPP
+                            </button>
+                            
+                            <button onclick="refuserConducteur(${cond.id}, '${cond.immatricule}')" 
+                                    style="padding: 8px 15px; background: transparent; 
+                                           color: #e74c3c; border: 1px solid #e74c3c; border-radius: 8px; cursor: pointer; 
+                                           font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
+                                <span>❌</span>
+                                Refuser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        container.innerHTML = `
+            <div class="result-error">
+                <strong>⚠️ Erreur de chargement</strong>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Activer un conducteur
+async function activerConducteur(conducteurId, immatricule) {
+    if (!confirm(`✅ Confirmer la vérification pour ${immatricule} ?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`http://localhost:5001/api/admin/verifications/${conducteurId}/activer`, {
+            method: 'POST',
+            headers: {
+                'Authorization': TOKEN,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(`✅ ${data.message}`);
+            chargerVerificationsWhatsApp();  // Recharger la liste
+        } else {
+            showError(`❌ Erreur: ${data.error}`);
+        }
+        
+    } catch (error) {
+        console.error('Erreur activation:', error);
+        showError('❌ Erreur de connexion');
+    }
+}
+
+// Ouvrir WhatsApp
+function ouvrirWhatsappAdmin(telephone, immatricule, categorie) {
+    const numero = telephone.replace('+', '').replace(/\s/g, '');
+    const message = `Vérification ZAHEL pour ${immatricule} (${categorie})`;
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+}
+
+// Refuser un conducteur
+async function refuserConducteur(conducteurId, immatricule) {
+    const raison = prompt(`❌ Raison du refus pour ${immatricule} :`, 
+                          "Documents incomplets / Non conformes");
+    
+    if (!raison) return;
+    
+    if (!confirm(`Confirmer le refus de ${immatricule} ?`)) {
+        return;
+    }
+    
+    try {
+        // Note: Il faudrait créer cette route dans l'API
+        showSuccess(`✅ Conducteur ${immatricule} refusé (simulation)`);
+        chargerVerificationsWhatsApp();
+        
+    } catch (error) {
+        showError('❌ Erreur de connexion');
+    }
+}
+// ========== GESTION DES ABONNEMENTS ==========
+let abonnementsData = [];
+
+async function chargerAbonnements() {
+    const container = document.getElementById('abonnements-container');
+    
+    try {
+        const response = await fetch('http://localhost:5001/api/admin/abonnements', {
+            headers: { 'Authorization': TOKEN }
+        });
+        
+        if (!response.ok) throw new Error(`Erreur ${response.status}`);
+        
+        const data = await response.json();
+        abonnementsData = data.abonnements;
+        
+        // Mettre à jour le résumé
+        const total = data.total;
+        const critiques = data.abonnements.filter(a => a.courses_restantes <= 5).length;
+        const totalCourses = data.abonnements.reduce((sum, a) => sum + a.courses_restantes, 0);
+        
+        document.getElementById('abonnements-resume').innerHTML = `
+            📊 Total: ${total} conducteurs | 
+            🔴 Critiques: ${critiques} | 
+            📦 Courses restantes: ${totalCourses}
+        `;
+        
+        // Charger la configuration
+        chargerConfigAbonnements();
+        
+        // Afficher la liste
+        afficherListeAbonnements(data.abonnements);
+        
+    } catch (error) {
+        container.innerHTML = `
+            <div class="result-error">
+                <strong>❌ Erreur de chargement</strong>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function afficherListeAbonnements(abonnements) {
+    const container = document.getElementById('abonnements-container');
+    
+    if (!abonnements || abonnements.length === 0) {
+        container.innerHTML = `
+            <div class="result-card" style="text-align: center; padding: 40px;">
+                <strong style="color: #3498db;">📭 Aucun abonnement trouvé</strong>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+    
+    abonnements.forEach(abo => {
+        const pourcentage = Math.round((abo.courses_achetees - abo.courses_restantes) / abo.courses_achetees * 100);
+        const couleurStatus = abo.status_color || 
+            (abo.courses_restantes <= 5 ? 'red' : 
+             abo.courses_restantes <= 10 ? 'orange' : 
+             abo.courses_restantes <= 20 ? 'yellow' : 'green');
+        
+        html += `
+            <div class="result-card" style="border-left: 4px solid ${couleurStatus === 'red' ? '#e74c3c' : 
+                                                                     couleurStatus === 'orange' ? '#e67e22' : 
+                                                                     couleurStatus === 'yellow' ? '#f1c40f' : 
+                                                                     '#2ecc71'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <strong style="color: #3498db;">${abo.immatricule}</strong>
+                            <span style="background: ${abo.disponible ? '#2ecc71' : '#e74c3c'}; 
+                                  padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                                ${abo.disponible ? 'DISPO' : 'INDISPO'}
+                            </span>
+                            ${abo.compte_suspendu ? `
+                            <span style="background: #e74c3c; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                                SUSPENDU
+                            </span>
+                            ` : ''}
+                        </div>
+                        
+                        <div style="font-size: 1.1em; margin-bottom: 5px;">
+                            👤 ${abo.nom}
+                        </div>
+                        
+                        <div style="color: rgba(255,255,255,0.8); margin-bottom: 10px;">
+                            📞 ${abo.telephone}
+                        </div>
+                        
+                        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span>📦 Abonnement:</span>
+                                <span style="font-weight: bold; color: ${couleurStatus === 'red' ? '#e74c3c' : 
+                                                                         couleurStatus === 'orange' ? '#e67e22' : 
+                                                                         couleurStatus === 'yellow' ? '#f1c40f' : 
+                                                                         '#2ecc71'};">
+                                    ${abo.courses_restantes}/${abo.courses_achetees}
+                                </span>
+                            </div>
+                            
+                            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 5px 0;">
+                                <div style="width: ${pourcentage}%; height: 8px; 
+                                            background: ${couleurStatus === 'red' ? '#e74c3c' : 
+                                                         couleurStatus === 'orange' ? '#e67e22' : 
+                                                         couleurStatus === 'yellow' ? '#f1c40f' : 
+                                                         '#2ecc71'}; 
+                                            border-radius: 4px;"></div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                                <input type="number" id="recharge-${abo.conducteur_id}" 
+                                       value="50" min="1" max="500" step="10"
+                                       style="width: 100px; padding: 5px; border-radius: 4px; 
+                                              background: rgba(255,255,255,0.1); color: white; 
+                                              border: 1px solid #3498db;">
+                                <button onclick="rechargerAbonnement(${abo.conducteur_id}, '${abo.immatricule}')"
+                                        style="padding: 5px 15px; background: #2ecc71; color: white; 
+                                               border: none; border-radius: 4px; cursor: pointer;">
+                                    🔄 Recharger
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function chargerConfigAbonnements() {
+    try {
+        const response = await fetch('http://localhost:5001/api/admin/abonnements/config', {
+            headers: { 'Authorization': TOKEN }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('config-forfait').value = data.config.forfait_defaut || 50;
+                document.getElementById('config-prix').value = data.config.prix_par_course || 1000;
+                document.getElementById('config-seuil').value = data.config.seuil_alerte || 5;
+            }
+        }
+    } catch (error) {
+        console.error('Erreur chargement config:', error);
+    }
+}
+
+async function sauvegarderConfigAbonnements() {
+    const config = {
+        forfait_defaut: document.getElementById('config-forfait').value,
+        prix_par_course: document.getElementById('config-prix').value,
+        seuil_alerte: document.getElementById('config-seuil').value
+    };
+    
+    try {
+        const response = await fetch('http://localhost:5001/api/admin/abonnements/config', {
+            method: 'POST',
+            headers: {
+                'Authorization': TOKEN,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess('✅ Configuration sauvegardée !');
+        } else {
+            showError('❌ Erreur: ' + data.error);
+        }
+    } catch (error) {
+        showError('❌ Erreur de connexion');
+    }
+}
+
+async function rechargerAbonnement(conducteurId, immatricule) {
+    const courses = document.getElementById(`recharge-${conducteurId}`).value;
+    
+    if (!confirm(`Recharger ${courses} courses pour ${immatricule} ?`)) {
+        return;
+    }
+    
+    const prix = document.getElementById('config-prix').value;
+    const total = courses * prix;
+    
+    if (!confirm(`💰 Montant à payer: ${total.toLocaleString()} KMF\nConfirmer le rechargement ?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('http://localhost:5001/api/admin/abonnements/recharger', {
+            method: 'POST',
+            headers: {
+                'Authorization': TOKEN,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                conducteur_id: conducteurId,
+                courses: parseInt(courses)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(`✅ ${data.message}`);
+            chargerAbonnements(); // Recharger la liste
+        } else {
+            showError('❌ Erreur: ' + (data.error || 'Rechargement échoué'));
+        }
+    } catch (error) {
+        showError('❌ Erreur de connexion');
+    }
+}
+    </script>
+</body>
+</html>

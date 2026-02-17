@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+*.db
+session.json
+.DS_Store
+*.log

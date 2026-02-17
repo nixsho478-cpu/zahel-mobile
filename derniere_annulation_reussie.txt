@@ -1,0 +1,2 @@
+Course: ZAHEL-BXX6961
+Résultat: {'actions_appliquees': [{'avertissement_numero': 1, 'message': "1er avertissement - Il vous reste 2 marge(s) d'erreur", 'type': 'avertissement'}], 'annule_par': 'client', 'course': 'ZAHEL-BXX6961', 's
