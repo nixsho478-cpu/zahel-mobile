@@ -58,8 +58,8 @@ android.extra_manifest =
 
 # Version Android
 android.minapi = 21
-android.sdk = 23
-android.ndk = 23b
+android.sdk = 31
+android.ndk = 25b
 
 # Configuration écran
 orientation = portrait
@@ -69,15 +69,11 @@ window.size = 360, 640
 # Version Python
 python.version = 3.9
 
-# Dossiers de build
-build.dir = C:/Users/USER/Desktop/zahel/build
-bin.dir = C:/Users/USER/Desktop/zahel/bin
-
 # Icône (on la créera après)
 icon.filename = assets/icon.png
 
 # DÉPENDANCES PYTHON (COMPLÈTES POUR MAPBOX)
-requirements = python3,kivy==2.3.0,requests,plyer,pillow
+requirements = python3,kivy==2.3.0,requests,plyer,pillow,sentry-sdk
 
 # DOSSIER DE CACHE POUR LES TUILES MAPBOX
 android.add_authorities = zahel.transport.comores.fileprovider
@@ -94,7 +90,7 @@ android.gradle_dependencies =
 # PERMETTRE LE CHARGEMENT DES RESSOURCES MAPBOX
 android.add_network_security_config = True
 android.allow_backup = True
-android.debug = False
+android.debug = True
 
 # POUR LE CACHE DES TUILES
 android.storage_path = /sdcard/Android/data/zahel.transport.comores/files
