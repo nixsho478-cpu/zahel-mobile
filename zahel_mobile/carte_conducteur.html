@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ZAHEL - Navigation</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            height: 100vh; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #map { 
+            position: absolute; 
+            top: 0; 
+            bottom: 0; 
+            width: 100%; 
+        }
+        
+        /* Panneau de navigation */
+        .nav-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 18px 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 450px;
+            margin: 0 auto;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .nav-instruction {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1A73E8;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .nav-distance {
+            font-size: 16px;
+            color: #5F6368;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-distance .distance-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #202124;
+        }
+        
+        .nav-distance .eta-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1A73E8;
+        }
+        
+        .center-btn {
+            position: absolute;
+            bottom: 160px;
+            right: 16px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1000;
+            transition: all 0.2s;
+        }
+        
+        .center-btn:hover {
+            background: #F1F3F4;
+            transform: scale(1.05);
+        }
+        
+        .center-btn.active {
+            background: #1A73E8;
+            color: white;
+        }
+        
+        .speed-indicator {
+            position: absolute;
+            top: 20px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-size: 22px;
+            font-weight: 700;
+            z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(26, 115, 232, 0.2);
+            z-index: 1000;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #1A73E8;
+            transition: width 0.5s ease;
+        }
+        
+        .dark-mode-toggle {
+            position: absolute;
+            top: 20px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        
+        /* Indicateur GPS */
+        .gps-status {
+            position: absolute;
+            top: 80px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .gps-status.active {
+            background: rgba(76, 175, 80, 0.8);
+        }
+        
+        .gps-status.inactive {
+            background: rgba(244, 67, 54, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <button class="dark-mode-toggle" id="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Nuit</button>
+    
+    <div class="gps-status" id="gps-status">📍 GPS: Recherche...</div>
+    
+    <div class="speed-indicator" id="speed">-- km/h</div>
+    
+    <button class="center-btn" id="center-btn" onclick="centerOnDriver()">📍</button>
+    
+    <div class="nav-panel" id="nav-panel">
+        <div class="nav-instruction" id="instruction">🚗 Démarrage...</div>
+        <div class="nav-distance">
+            <span>📍 Distance</span>
+            <span class="distance-value" id="distance-value">-- km</span>
+            <span>⏱️ ETA</span>
+            <span class="eta-value" id="eta-value">-- min</span>
+        </div>
+    </div>
+
+    <script>
+        // ⭐⭐⭐ CONFIGURATION ⭐⭐⭐
+        const accessToken = 'MAPBOX_TOKEN_PLACEHOLDER';
+        const departLat = DEPART_LAT_PLACEHOLDER;
+        const departLng = DEPART_LNG_PLACEHOLDER;
+        const arriveeLat = ARRIVEE_LAT_PLACEHOLDER;
+        const arriveeLng = ARRIVEE_LNG_PLACEHOLDER;
+        
+        // Code de la course (à récupérer de l'URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseCode = urlParams.get('course') || '';
+        
+        // Variables globales
+        let map;
+        let currentRoute = null;
+        let routeCoordinates = [];
+        let driverPosition = [departLng, departLat];
+        let driverBearing = 0;
+        let lastPosition = null;
+        let followingDriver = true;
+        let isDarkMode = false;
+        let totalDistance = 0;
+        let distanceTraveled = 0;
+        let routeGeoJSON = null;
+        let gpsWatchId = null;
+        let apiPollInterval = null;
+        
+        console.log('=== ZAHEL NAVIGATION (GPS RÉEL) ===');
+        console.log('📍 Départ:', departLat, departLng);
+        console.log('🏁 Arrivée:', arriveeLat, arriveeLng);
+        console.log('📋 Course:', courseCode);
+        
+        // ⭐⭐⭐ CRÉATION DU PUCK DE NAVIGATION (FLÈCHE) ⭐⭐⭐
+        function createNavigationPuck() {
+            const arrowSvg = `
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+                        </filter>
+                        <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1A73E8;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="32" cy="32" r="28" fill="white" filter="url(#shadow)"/>
+                    <circle cx="32" cy="32" r="26" fill="white"/>
+                    <circle cx="32" cy="32" r="22" fill="url(#arrowGrad)"/>
+                    <polygon points="32,8 44,36 36,36 36,52 28,52 28,36 20,36" fill="white"/>
+                    <polygon points="32,8 38,20 32,20 28,20 26,20" fill="rgba(255,255,255,0.3)"/>
+                    <circle cx="32" cy="32" r="5" fill="#1A73E8"/>
+                    <circle cx="32" cy="32" r="2" fill="white"/>
+                    <circle cx="32" cy="32" r="22" fill="none" stroke="white" stroke-width="1.5" opacity="0.4"/>
+                </svg>
+            `;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(arrowSvg);
+        }
+        
+        // ⭐⭐⭐ INITIALISATION DE LA CARTE ⭐⭐⭐
+        function initMap() {
+            mapboxgl.accessToken = accessToken;
+            
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/navigation-day-v1',
+                center: driverPosition,
+                zoom: 16,
+                pitch: 55,
+                bearing: 0,
+                antialias: true
+            });
+            
+            map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+            map.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+            
+            map.on('load', function() {
+                console.log('✅ Carte chargée');
+                
+                const puckImage = createNavigationPuck();
+                const img = new Image();
+                img.src = puckImage;
+                img.onload = function() {
+                    map.addImage('navigation-puck', img);
+                    console.log('✅ Puck de navigation chargé');
+                    
+                    map.addSource('driver-location', {
+                        type: 'geojson',
+                        data: {
+                            type: 'Feature',
+                            geometry: { type: 'Point', coordinates: driverPosition },
+                            properties: { bearing: 0 }
+                        }
+                    });
+                    
+                    map.addLayer({
+                        id: 'driver-puck',
+                        type: 'symbol',
+                        source: 'driver-location',
+                        layout: {
+                            'icon-image': 'navigation-puck',
+                            'icon-size': 0.85,
+                            'icon-allow-overlap': true,
+                            'icon-ignore-placement': true,
+                            'icon-rotation-alignment': 'map',
+                            'icon-rotate': ['get', 'bearing']
+                        }
+                    });
+                    
+                    map.addLayer({
+                        id: 'driver-accuracy',
+                        type: 'circle',
+                        source: 'driver-location',
+                        paint: {
+                            'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 15, 20, 40],
+                            'circle-color': '#4285F4',
+                            'circle-opacity': 0.12,
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#4285F4',
+                            'circle-stroke-opacity': 0.3
+                        }
+                    });
+                    
+                    addMarkersAndRoute();
+                };
+            });
+            
+            map.on('movestart', function() {
+                followingDriver = false;
+                document.getElementById('center-btn').classList.remove('active');
+            });
+            
+            // Démarrer le GPS
+            startRealGPS();
+            
+            // Démarrer le polling API (fallback)
+            startAPIPolling();
+        }
+        
+        // ⭐⭐⭐ DÉMARRER LE GPS RÉEL ⭐⭐⭐
+        function startRealGPS() {
+            if (!navigator.geolocation) {
+                console.warn('⚠️ Géolocalisation non supportée');
+                document.getElementById('gps-status').className = 'gps-status inactive';
+                document.getElementById('gps-status').textContent = '📍 GPS: Non supporté';
+                return;
+            }
+            
+            gpsWatchId = navigator.geolocation.watchPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    const speed = position.coords.speed || 0;
+                    const heading = position.coords.heading || driverBearing;
+                    
+                    document.getElementById('gps-status').className = 'gps-status active';
+                    document.getElementById('gps-status').textContent = `📍 GPS: ${accuracy.toFixed(0)}m`;
+                    
+                    // Calculer le bearing si on a une position précédente
+                    let bearing = heading;
+                    if (heading === null || heading === undefined) {
+                        if (lastPosition) {
+                            bearing = calculateBearing(
+                                lastPosition[1], lastPosition[0],
+                                lat, lng
+                            );
+                        }
+                    }
+                    
+                    // Mettre à jour la position
+                    updateDriverPosition(lat, lng, bearing);
+                    
+                    // Mettre à jour la vitesse
+                    const speedKmh = (speed * 3.6).toFixed(0);
+                    document.getElementById('speed').textContent = speedKmh + ' km/h';
+                    
+                    // Envoyer la position au backend
+                    sendPositionToBackend(lat, lng, bearing, speed);
+                    
+                    // Mettre à jour l'itinéraire restant
+                    updateRemainingRoute(lat, lng);
+                    
+                },
+                function(error) {
+                    console.error('❌ Erreur GPS:', error);
+                    document.getElementById('gps-status').className = 'gps-status inactive';
+                    
+                    let errorMsg = 'Erreur';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED: errorMsg = 'Permission refusée'; break;
+                        case error.POSITION_UNAVAILABLE: errorMsg = 'Position indisponible'; break;
+                        case error.TIMEOUT: errorMsg = 'Timeout'; break;
+                    }
+                    document.getElementById('gps-status').textContent = `📍 GPS: ${errorMsg}`;
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 2000,
+                    timeout: 5000
+                }
+            );
+            
+            console.log('✅ GPS démarré');
+        }
+        
+        // ⭐⭐⭐ POLLING API (FALLBACK) ⭐⭐⭐
+        function startAPIPolling() {
+            if (!courseCode) return;
+            
+            apiPollInterval = setInterval(function() {
+                fetch(`http://localhost:5001/api/courses/${courseCode}/statut`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.course && data.course.conducteur) {
+                            const driver = data.course.conducteur;
+                            if (driver.latitude && driver.longitude) {
+                                // Utiliser l'API comme fallback si GPS non disponible
+                                if (!navigator.geolocation) {
+                                    updateDriverPosition(driver.latitude, driver.longitude, driverBearing);
+                                }
+                            }
+                        }
+                    })
+                    .catch(e => console.error('Erreur API:', e));
+            }, 3000);
+        }
+        
+        // ⭐⭐⭐ ENVOYER LA POSITION AU BACKEND ⭐⭐⭐
+        function sendPositionToBackend(lat, lng, bearing, speed) {
+            // À implémenter : envoyer via API
+            console.log(`📍 Position: ${lat.toFixed(6)}, ${lng.toFixed(6)} | Cap: ${bearing.toFixed(0)}° | ${(speed*3.6).toFixed(0)} km/h`);
+        }
+        
+        // ⭐⭐⭐ AJOUTER MARQUEURS ET ITINÉRAIRE ⭐⭐⭐
+        function addMarkersAndRoute() {
+            new mapboxgl.Marker({ color: '#4CAF50' })
+                .setLngLat([departLng, departLat])
+                .setPopup(new mapboxgl.Popup().setHTML('<b>🟢 Point de départ</b>'))
+                .addTo(map);
+            
+            new mapboxgl.Marker({ color: '#E53935' })
+                .setLngLat([arriveeLng, arriveeLat])
+                .setPopup(new mapboxgl.Popup().setHTML('<b>🔴 Destination</b>'))
+                .addTo(map);
+            
+            calculateAndDrawRoute();
+        }
+        
+        // ⭐⭐⭐ CALCULER L'ITINÉRAIRE COMPLET ⭐⭐⭐
+        function calculateAndDrawRoute() {
+            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${departLng},${departLat};${arriveeLng},${arriveeLat}?geometries=geojson&steps=true&overview=full&access_token=${accessToken}`;
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.routes && data.routes[0]) {
+                        const route = data.routes[0];
+                        routeGeoJSON = route.geometry;
+                        routeCoordinates = route.geometry.coordinates;
+                        
+                        totalDistance = route.distance;
+                        const distanceKm = (totalDistance / 1000).toFixed(1);
+                        const durationMin = Math.round(route.duration / 60);
+                        
+                        document.getElementById('distance-value').textContent = distanceKm + ' km';
+                        document.getElementById('eta-value').textContent = durationMin + ' min';
+                        
+                        const steps = route.legs[0].steps;
+                        if (steps && steps.length > 0) {
+                            document.getElementById('instruction').textContent = steps[0].maneuver.instruction;
+                        }
+                        
+                        // Dessiner l'itinéraire COMPLET
+                        drawFullRoute(route.geometry);
+                        
+                        console.log(`✅ Itinéraire chargé: ${distanceKm} km, ${routeCoordinates.length} points`);
+                    }
+                })
+                .catch(e => console.error('❌ Erreur itinéraire:', e));
+        }
+        
+        // ⭐⭐⭐ DESSINER L'ITINÉRAIRE COMPLET ⭐⭐⭐
+        function drawFullRoute(geometry) {
+            if (map.getSource('route')) {
+                map.getLayer('route') && map.removeLayer('route');
+                map.getLayer('route-outline') && map.removeLayer('route-outline');
+                map.removeSource('route');
+            }
+            
+            map.addSource('route', {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    geometry: geometry
+                }
+            });
+            
+            // Bordure blanche (dessous)
+            map.addLayer({
+                id: 'route-outline',
+                type: 'line',
+                source: 'route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#FFFFFF',
+                    'line-width': 8,
+                    'line-opacity': 0.4
+                }
+            });
+            
+            // Ligne bleue principale (dessus)
+            map.addLayer({
+                id: 'route',
+                type: 'line',
+                source: 'route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#1A73E8',
+                    'line-width': 5,
+                    'line-opacity': 0.9
+                }
+            });
+            
+            const bounds = new mapboxgl.LngLatBounds()
+                .extend([departLng, departLat])
+                .extend([arriveeLng, arriveeLat]);
+            map.fitBounds(bounds, { padding: 60, duration: 1000 });
+        }
+        
+        // ⭐⭐⭐ METTRE À JOUR L'ITINÉRAIRE RESTANT (EFFACER LE PARCOURU) ⭐⭐⭐
+        function updateRemainingRoute(lat, lng) {
+            if (!routeGeoJSON || !routeCoordinates || routeCoordinates.length === 0) return;
+            
+            // Trouver le point le plus proche sur l'itinéraire
+            let closestIndex = 0;
+            let minDistance = Infinity;
+            
+            for (let i = 0; i < routeCoordinates.length; i++) {
+                const coord = routeCoordinates[i];
+                const dist = calculateDistance(lat, lng, coord[1], coord[0]);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestIndex = i;
+                }
+            }
+            
+            // Si on a avancé d'au moins 2 points
+            if (closestIndex > 2) {
+                // Créer le nouvel itinéraire (du point actuel à la destination)
+                const remainingCoords = routeCoordinates.slice(closestIndex);
+                
+                // Ajouter la position actuelle comme premier point
+                remainingCoords.unshift([lng, lat]);
+                
+                const remainingGeometry = {
+                    type: 'LineString',
+                    coordinates: remainingCoords
+                };
+                
+                // Mettre à jour la source de l'itinéraire
+                if (map.getSource('route')) {
+                    map.getSource('route').setData({
+                        type: 'Feature',
+                        geometry: remainingGeometry
+                    });
+                }
+                
+                // Calculer la distance restante
+                let remainingDistance = 0;
+                for (let i = 1; i < remainingCoords.length; i++) {
+                    remainingDistance += calculateDistance(
+                        remainingCoords[i-1][1], remainingCoords[i-1][0],
+                        remainingCoords[i][1], remainingCoords[i][0]
+                    );
+                }
+                
+                const remainingKm = (remainingDistance / 1000).toFixed(1);
+                const remainingTime = Math.max(1, Math.round((remainingDistance / 8.33) / 60)); // ~30 km/h
+                
+                document.getElementById('distance-value').textContent = remainingKm + ' km';
+                document.getElementById('eta-value').textContent = remainingTime + ' min';
+                
+                // Mettre à jour la progression
+                const progress = ((totalDistance - remainingDistance) / totalDistance) * 100;
+                document.getElementById('progress-fill').style.width = Math.min(progress, 100) + '%';
+                
+                // Mettre à jour routeCoordinates pour les prochains appels
+                routeCoordinates = remainingCoords;
+            }
+        }
+        
+        // ⭐⭐⭐ CALCULER LA DISTANCE ⭐⭐⭐
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // ⭐⭐⭐ CALCULER LE BEARING ⭐⭐⭐
+        function calculateBearing(lat1, lng1, lat2, lng2) {
+            const startLat = lat1 * Math.PI / 180;
+            const startLng = lng1 * Math.PI / 180;
+            const endLat = lat2 * Math.PI / 180;
+            const endLng = lng2 * Math.PI / 180;
+            
+            const dLng = endLng - startLng;
+            const y = Math.sin(dLng) * Math.cos(endLat);
+            const x = Math.cos(startLat) * Math.sin(endLat) -
+                      Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLng);
+            
+            let bearing = Math.atan2(y, x) * 180 / Math.PI;
+            return (bearing + 360) % 360;
+        }
+        
+        // ⭐⭐⭐ METTRE À JOUR LA POSITION DU CONDUCTEUR ⭐⭐⭐
+        function updateDriverPosition(lat, lng, bearing) {
+            driverPosition = [lng, lat];
+            driverBearing = bearing;
+            
+            // Sauvegarder la dernière position pour calculer le bearing
+            if (lastPosition) {
+                const distance = calculateDistance(lastPosition[1], lastPosition[0], lat, lng);
+                if (distance > 5) { // Plus de 5 mètres
+                    lastPosition = [lng, lat];
+                }
+            } else {
+                lastPosition = [lng, lat];
+            }
+            
+            if (map.getSource('driver-location')) {
+                map.getSource('driver-location').setData({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: driverPosition },
+                    properties: { bearing: driverBearing }
+                });
+                
+                if (followingDriver) {
+                    map.easeTo({
+                        center: driverPosition,
+                        bearing: driverBearing,
+                        pitch: 60,
+                        duration: 500
+                    });
+                }
+            }
+        }
+        
+        function centerOnDriver() {
+            followingDriver = true;
+            document.getElementById('center-btn').classList.add('active');
+            
+            map.flyTo({
+                center: driverPosition,
+                bearing: driverBearing,
+                pitch: 60,
+                zoom: 17,
+                duration: 800
+            });
+        }
+        
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const style = isDarkMode ? 'mapbox://styles/mapbox/navigation-night-v1' : 'mapbox://styles/mapbox/navigation-day-v1';
+            map.setStyle(style);
+            document.getElementById('dark-mode-toggle').textContent = isDarkMode ? '☀️ Jour' : '🌙 Nuit';
+            
+            map.once('style.load', function() {
+                const puckImage = createNavigationPuck();
+                const img = new Image();
+                img.src = puckImage;
+                img.onload = function() {
+                    map.addImage('navigation-puck', img);
+                    map.addSource('driver-location', {
+                        type: 'geojson',
+                        data: {
+                            type: 'Feature',
+                            geometry: { type: 'Point', coordinates: driverPosition },
+                            properties: { bearing: driverBearing }
+                        }
+                    });
+                    map.addLayer({
+                        id: 'driver-puck',
+                        type: 'symbol',
+                        source: 'driver-location',
+                        layout: {
+                            'icon-image': 'navigation-puck',
+                            'icon-size': 0.85,
+                            'icon-allow-overlap': true,
+                            'icon-ignore-placement': true,
+                            'icon-rotation-alignment': 'map',
+                            'icon-rotate': ['get', 'bearing']
+                        }
+                    });
+                    map.addLayer({
+                        id: 'driver-accuracy',
+                        type: 'circle',
+                        source: 'driver-location',
+                        paint: {
+                            'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 15, 20, 40],
+                            'circle-color': '#4285F4',
+                            'circle-opacity': 0.12,
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#4285F4',
+                            'circle-stroke-opacity': 0.3
+                        }
+                    });
+                    drawFullRoute(routeGeoJSON);
+                };
+            });
+        }
+        
+        // Nettoyage
+        window.addEventListener('beforeunload', function() {
+            if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+            if (apiPollInterval) clearInterval(apiPollInterval);
+        });
+        
+        window.centerOnDriver = centerOnDriver;
+        window.toggleDarkMode = toggleDarkMode;
+        
+        window.onload = initMap;
+    </script>
+</body>
+</html>

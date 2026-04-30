@@ -3,34 +3,13 @@
 # Les modules android et jnius ne sont disponibles que sur Android
 # C'est normal d'avoir des alertes sous Windows
 
-# main.py – VERSION MAPBOX FINALE
-
-# ⭐⭐⭐ SENTRY - Capture des erreurs sur mobile ⭐⭐⭐
-import sentry_sdk
-
-sentry_sdk.init(
-    dsn="https://f386540e578ab0f3bf1ecf580b397a88@o4511270167773184.ingest.de.sentry.io/4511270389743696",
-    send_default_pii=True,
-    traces_sample_rate=1.0,
-    environment="production"
-)
-
+# ✅ AJOUTE CES 3 LIGNES TOUT AU DÉBUT
 import os
 import sys
-import json
-import threading
-import time
-import random
-import math
-import webbrowser
-import concurrent.futures
-from datetime import datetime
-from urllib.parse import quote, urlparse, parse_qs
+os.environ['KIVY_NO_ARGS'] = '1'  # ✅ IMPORTANT : Désactive Kivy arguments
 
-# Désactiver les arguments Kivy
-os.environ['KIVY_NO_ARGS'] = '1'
+# main.py – CORRECTION COMPLÈTE
 
-# Kivy imports
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
@@ -44,87 +23,25 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.widget import Widget
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.checkbox import CheckBox
-from kivy.uix.switch import Switch
+from kivy.uix.switch import Switch  # ← Pour les paramètres
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
+from kivy_garden.mapview import MapView, MapMarker  # <-- COMMENTE
 from kivy.utils import platform
 from kivy.clock import Clock
-
-# Configuration et i18n
+from datetime import datetime
+from urllib.parse import quote, urlparse, parse_qs
 from config.config import Config
 from i18n.translations import _, set_language, get_translator
-
-# ========== MAPBOX IMPORTS (VERSION UNIQUE) ==========
-
-try:
-    from map_selection_screen import MapSelectionScreen as MapboxSelectionScreen
-    MAPBOX_SELECTION_AVAILABLE = True
-    print("✅ MapSelectionScreenEnhancedFixed (Mapbox WebView) import OK")
-except ImportError as e:
-    MAPBOX_SELECTION_AVAILABLE = False
-    print(f"⚠️ MapSelectionScreenEnhancedFixed import failed: {e}")
-
-try:
-    from navigation_mapbox import NavigationScreenMapbox
-    MAPBOX_NAV_AVAILABLE = True
-    print("✅ Navigation Mapbox disponible")
-except ImportError as e:
-    MAPBOX_NAV_AVAILABLE = False
-    print(f"⚠️ Navigation Mapbox non disponible: {e}")
-
-try:
-    from tracking_mapbox import DriverTrackingScreenMapbox
-    MAPBOX_TRACKING_AVAILABLE = True
-    print("✅ Tracking Mapbox disponible")
-except ImportError as e:
-    MAPBOX_TRACKING_AVAILABLE = False
-    print(f"⚠️ Tracking Mapbox non disponible: {e}")
-
-# ========== FALLBACK OSM SI MAPBOX INDISPONIBLE ==========
-if not MAPBOX_SELECTION_AVAILABLE:
-    from kivy_garden.mapview import MapView, MapMarker
-    print("⚠️ Utilisation du fallback OSM pour la carte")
-
-# ========== CLIENT API ==========
-try:
-    from api.client import APIClient
-    from config.config import Config 
-    
-    # ⭐ CRÉER LE CLIENT AVEC L'URL DE CONFIGURATION
-    _api_client = APIClient(Config.API_BASE_URL)
-    
-    def get_api_client():
-        global _api_client
-        return _api_client
-    
-    api_client = _api_client
-    API_MODULE_EXISTS = True
-    print(f"✅ API Client importé avec URL: {Config.API_BASE_URL}")
-    
-    if hasattr(api_client, "test_connection"):
-        if api_client.test_connection():
-            print("✅ Connexion API réussie")
-        else:
-            print("⚠️ Impossible de se connecter à l'API")
-except ImportError as e:
-    API_MODULE_EXISTS = False
-    api_client = None
-    print(f"⚠️ Impossible d'importer api.client: {e}")
-
-# ========== CONFIGURATION ==========
-Window.size = (360, 640)
-Window.title = "ZAHEL"
-
-# Filtrage des arguments
-IS_DRIVER_MODE = False
-for arg in ['--driver', '--conducteur', '--chauffeur']:
-    if arg in sys.argv:
-        IS_DRIVER_MODE = True
-        sys.argv.remove(arg)
-        print(f"🚗 MODE APPLICATION: CONDUCTEUR")
-        break
-else:
-    print(f"🚗 MODE APPLICATION: CLIENT")
+import json
+import threading
+import time
+import os
+import requests
+import random
+import sys
+import webbrowser
+import math
 
 # ==================== GESTION DES PERMISSIONS ANDROID ====================
 
@@ -483,17 +400,21 @@ class ClientLoginScreen(Screen):
         self.add_widget(layout)
 
     def login(self, instance):
-        """Connexion avec l'API réelle - VERSION CORRIGÉE"""
+        # ✅ AJOUTE AU DÉBUT
         global api_client, API_MODULE_EXISTS
 
-        # Supprimer toute ancienne session
+        # ✅ 1. SUPPRIMER TOUTE ANCIENNE SESSION
         try:
             if os.path.exists('session.json'):
                 os.remove('session.json')
                 print("🗑️ Ancienne session supprimée")
         except Exception as e:
             print(f"⚠️ Erreur suppression session: {e}")
+    
+        phone = self.txt_phone.text.strip()
+        password = self.txt_password.text.strip()
 
+        """Connexion avec l'API réelle"""
         phone = self.txt_phone.text.strip()
         password = self.txt_password.text.strip()
 
@@ -502,8 +423,8 @@ class ClientLoginScreen(Screen):
             return
 
         print(f"Tentative de connexion: {phone}")
-
-        # Afficher l'état avant connexion
+    
+        # ✅ AFFICHER L'ÉTAT AVANT CONNEXION
         print("\n🔍 ÉTAT AVANT CONNEXION:")
         print(f"   api_client.token avant: {getattr(api_client, 'token', 'None')}")
         print(f"   api_client.user_type avant: {getattr(api_client, 'user_type', 'None')}")
@@ -520,39 +441,44 @@ class ClientLoginScreen(Screen):
             def do_login():
                 result = api_client.client_login(phone, password)
                 from kivy.clock import Clock
-
+            
                 def process_result(dt):
                     print("\n🔍 RÉSULTAT API REÇU:")
                     print(f"   Résultat complet: {result}")
-
-                    # ⭐ Appeler handle_login_result (qui gère TOUT)
+                
+                    # ✅ 1. D'ABORD TRAITER LE RÉSULTAT
                     self.handle_login_result(result, instance)
-
-                    # ⭐ DEBUG final
+                
+                    # ✅ 2. ENSUITE FAIRE LE DEBUG (avant redirection)
                     self.debug_api_client_state()
-
-                    # ⭐⭐⭐ IMPORTANT : NE PAS REDIRIGER ICI !!! ⭐⭐⭐
-                    # La redirection est gérée DANS handle_login_result
-                    # UNIQUEMENT si la connexion réussit
-
+                
+                    # ✅ 3. PUIS REDIRIGER
+                    print(f"\n{'='*60}")
+                    print(f"🎯 APRÈS CONNEXION - DEBUG")
+                    print(f"🎯 Redirection vers: client_home")
+                    print(f"🎯 Écran actuel avant: {self.manager.current}")
+                    self.manager.current = 'client_home'
+                    print(f"🎯 Écran actuel après: {self.manager.current}")
+                    print(f"{'='*60}\n")
+        
                 Clock.schedule_once(process_result, 0)
 
             threading.Thread(target=do_login, daemon=True).start()
         else:
-            # Simulation (fallback)
-            print("⚠️ Utilisation de la simulation (API non disponible)")
+            # Simulation
+            print("⚠️  Utilisation de la simulation (API non disponible)")
             from kivy.clock import Clock
-
+        
             def simulate(dt):
                 result = {
-                    'success': True,
+                    'success': True, 
                     'token': 'simulated_token_' + phone,
-                    'client': {'telephone': phone, 'nom': 'Client Test'}
+                    'client': {'telephone': phone}
                 }
                 self.handle_login_result(result, instance)
                 self.debug_api_client_state()
-                # Pas de redirection ici non plus
-
+                self.manager.current = 'client_home'
+        
             Clock.schedule_once(simulate, 1)
 
     def go_back(self, instance):
@@ -565,173 +491,95 @@ class ClientLoginScreen(Screen):
         self.manager.current = "client_register"
 
     def handle_login_result(self, result, instance):
-        """Gérer le résultat de la connexion - VERSION CORRIGÉE"""
+        """Gérer le résultat de la connexion"""
         global api_client, API_MODULE_EXISTS
-
+    
         # Réactiver le bouton
         instance.disabled = False
         instance.text = "Se connecter"
-
-        print(f"\n{'='*50}")
-        print(f"🔍 RÉSULTAT CONNEXION - TRAITEMENT")
-        print(f"{'='*50}")
-        print(f"   Success: {result.get('success')}")
-        print(f"   Token présent: {'token' in result}")
-        print(f"   Client présent: {'client' in result}")
-
-        # ========== CAS 1 : CONNEXION RÉUSSIE ==========
+    
+        print(f"🔍 Résultat connexion reçu: {result}")
+    
         if result.get('success'):
             print("✅ Connexion API réussie!")
         
-            # Extraire le token
+            # ✅ EXTRAIRE LE TOKEN CORRECTEMENT
             token = result.get('token')
             if not token:
+                # Essayer un autre format de réponse
                 data = result.get('data', {})
                 token = data.get('token')
         
+            print(f"✅ Token reçu: {token}")
+        
             if token:
-                print(f"✅ Token reçu: {token[:10]}...")
-            
-                # ⭐ 1. CONFIGURER LE TOKEN DANS API_CLIENT
+                # ✅ ÉTAPE CRITIQUE : CONFIGURER LE TOKEN DANS API_CLIENT
                 if api_client and API_MODULE_EXISTS:
                     success = api_client.set_token(token, 'client')
                     if success:
                         print(f"✅ Token configuré dans api_client")
-                        print(f"   User type: {api_client.user_type}")
+                        print(f"   Token: {token}")
+                        print(f"   User type: client")
                     else:
-                        print(f"⚠️ Erreur configuration api_client")
+                        print(f"❌ Erreur configuration api_client")
             
-                # ⭐ 2. NETTOYER LES ANCIENNES DONNÉES AVANT DE STOCKER LES NOUVELLES
+                # Stocker dans l'application
+                from kivy.app import App
                 app = App.get_running_app()
             
-                # Supprimer les anciennes données client
-                if hasattr(app, 'client_data'):
-                    print(f"🗑️ Anciennes données client supprimées: {app.client_data.get('telephone', 'inconnu')}")
-                    delattr(app, 'client_data')
-            
-                # Supprimer aussi les données conducteur si présentes
-                if hasattr(app, 'conducteur_data'):
-                    delattr(app, 'conducteur_data')
-                    print(f"🗑️ Anciennes données conducteur supprimées")
-            
-                # ⭐ 3. STOCKER LES NOUVELLES DONNÉES CLIENT
+                # Créer client_data
                 client_info = result.get('client', {})
                 if not client_info:
                     client_info = result.get('data', {}).get('client', {})
             
-                telephone = self.txt_phone.text.strip()
-            
                 app.client_data = {
                     'token': token,
-                    'telephone': telephone,
+                    'telephone': self.txt_phone.text.strip(),
                     'user_type': 'client',
-                    'nom': client_info.get('nom', 'Client ZAHEL'),
-                    'id': client_info.get('id'),
-                    **client_info
+                    **client_info  # Ajouter d'autres infos client
                 }
             
-                print(f"✅ Nouvelles données client stockées:")
-                print(f"   Téléphone: {telephone}")
-                print(f"   Nom: {app.client_data.get('nom', 'N/A')}")
-                print(f"   Token: {token[:10]}...")
+                # ✅ AUSSI STOCKER LE TÉLÉPHONE DANS L'APP
+                app.telephone = self.txt_phone.text.strip()
             
-                # ⭐ 4. SAUVEGARDER LA SESSION (écrase l'ancienne)
-                nom = app.client_data.get('nom', '')
-                self.save_session('client', telephone, token, nom)
+                print(f"✅ Client data stocké: {app.client_data}")
             
-                # ⭐ 5. REDIRECTION VERS L'ACCUEIL CLIENT
-                print(f"🎯 Redirection vers client_home")
+                # ✅ SAUVEGARDER LA SESSION
+                self.save_session('client', self.txt_phone.text.strip(), token)
+            
+                # Aller à l'accueil client
                 self.manager.current = 'client_home'
             
             else:
                 print("❌ Aucun token dans la réponse")
                 self.show_popup("Erreur", "Token manquant dans la réponse")
             
-                # ⭐ NETTOYER LES DONNÉES EN CAS D'ERREUR
-                app = App.get_running_app()
-                if hasattr(app, 'client_data'):
-                    delattr(app, 'client_data')
-    
-        # ========== CAS 2 : CONNEXION ÉCHOUÉE ==========
         else:
             error = result.get('error', 'Erreur inconnue')
-            details = result.get('details', '')
-        
-            print(f"❌ ÉCHEC DE CONNEXION")
-            print(f"   Erreur: {error}")
-            if details:
-                print(f"   Détails: {details}")
-        
-            # ⭐⭐⭐ IMPORTANT : NETTOYER TOUTES LES DONNÉES DE SESSION ⭐⭐⭐
-            app = App.get_running_app()
-        
-            # 1. Supprimer les données en mémoire
-            if hasattr(app, 'client_data'):
-                print(f"🗑️ Suppression des données client en mémoire")
-                delattr(app, 'client_data')
-        
-            if hasattr(app, 'conducteur_data'):
-                print(f"🗑️ Suppression des données conducteur en mémoire")
-                delattr(app, 'conducteur_data')
-        
-            # 2. Réinitialiser l'API client
-            if api_client:
-                api_client.token = None
-                api_client.user_type = None
-                print(f"🔄 API client réinitialisé")
-        
-            # 3. Supprimer le fichier de session
-            try:
-                import os
-                if os.path.exists('session.json'):
-                    os.remove('session.json')
-                    print(f"🗑️ Fichier session.json supprimé")
-            except Exception as e:
-                print(f"⚠️ Erreur suppression session: {e}")
-        
-            # 4. Afficher un message d'erreur approprié
-            if "404" in error or "non trouvé" in error.lower():
-                message = "Ce numéro n'est pas enregistré.\n\nVoulez-vous créer un compte ?"
-                self.show_register_suggestion(message)
-            elif "401" in error or "incorrect" in error.lower():
-                message = "Mot de passe incorrect.\n\nVeuillez réessayer."
-                self.show_popup("Erreur", message)
-            elif "429" in error:
-                message = "Trop de tentatives.\n\nVeuillez patienter quelques minutes."
-                self.show_popup("Erreur", message)
-            else:
-                message = f"Connexion échouée:\n{error}"
-                self.show_popup("Erreur", message)
-        
-            # ⭐⭐⭐ NE PAS REDIRIGER ! Rester sur l'écran de connexion ⭐⭐⭐
-            print(f"📍 Rester sur l'écran de connexion")
-    
-        print(f"{'='*50}\n")
+            print(f"❌ Erreur connexion: {error}")
+            self.show_popup("Erreur", f"Connexion échouée: {error}")
 
-    def save_session(self, user_type, identifier, token, nom=None):
+    def save_session(self, user_type, identifier, token):
         """Sauvegarder la session localement"""
         import json
         import time
-
+    
         session_data = {
             'user_type': user_type,
             'identifier': identifier,
             'token': token,
-            'nom': nom,
             'timestamp': time.time()
         }
-
+    
         try:
             with open('session.json', 'w') as f:
                 json.dump(session_data, f)
             print(f"✅ Session sauvegardée dans session.json")
             print(f"   Type: {user_type}")
             print(f"   Identifiant: {identifier}")
-            if nom:
-                print(f"   Nom: {nom}")
-            print(f"   Token: {token[:10]}...")
+            print(f"   Token: {token}")
         except Exception as e:
-            print(f"❌ Erreur sauvegarde session: {e}")
+            print(f"❌ Erreur sauvegarde session: {e}")        
 
     def go_to_register(self, instance):
         """Aller à l'écran d'inscription"""
@@ -791,59 +639,6 @@ class ClientLoginScreen(Screen):
             popup.open()
 
         Clock.schedule_once(lambda dt: show(), 0)
-
-    def show_register_suggestion(self, message):
-        """Afficher une suggestion d'inscription"""
-        from kivy.uix.popup import Popup
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.label import Label
-        from kivy.uix.button import Button
-
-        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
-
-        lbl = Label(
-            text=message,
-            halign='center',
-            font_size='16sp'
-        )
-
-        btn_layout = BoxLayout(spacing=15, size_hint_y=None, height=50)
-
-        btn_register = Button(
-            text="📝 CRÉER UN COMPTE",
-            background_color=(0.2, 0.6, 0.2, 1),
-            color=(1, 1, 1, 1)
-        )
-
-        btn_cancel = Button(
-            text="Annuler",
-            background_color=(0.8, 0.2, 0.2, 1),
-            color=(1, 1, 1, 1)
-        )
-
-        popup = Popup(
-            title='Compte non trouvé',
-            content=content,
-            size_hint=(0.8, 0.4),
-            auto_dismiss=False
-        )
-
-        def go_to_register(inst):
-            popup.dismiss()
-            if "client_register" not in self.manager.screen_names:
-                self.manager.add_widget(ClientRegisterScreen(name="client_register"))
-            self.manager.current = "client_register"
-
-        btn_register.bind(on_press=go_to_register)
-        btn_cancel.bind(on_press=popup.dismiss)
-
-        btn_layout.add_widget(btn_cancel)
-        btn_layout.add_widget(btn_register)
-
-        content.add_widget(lbl)
-        content.add_widget(btn_layout)
-
-        popup.open()
         
 
 
@@ -1136,50 +931,10 @@ class LoginScreen(Screen):
                 if result.get("success"):
                     print(f"✅ Connexion API réussie")
                     app.immatricule = immatricule
-    
-                    # ⭐⭐⭐ SAUVEGARDER LA SESSION CONDUCTEUR ⭐⭐⭐
-                    self.save_driver_session(immatricule, result.get('token', immatricule))
-    
                     self.manager.current = "dashboard"
                     self.manager.get_screen("dashboard").update_data()
                 else:
-                    # ⭐⭐⭐ EXTRAIRE LE VRAI MESSAGE D'ERREUR ⭐⭐⭐
-                    error_msg = result.get('error', 'Erreur inconnue')
-                    
-                    print(f"❌ Erreur connexion: {error_msg}")
-                    
-                    # Convertir l'erreur en minuscules pour faciliter la détection
-                    error_lower = error_msg.lower()
-                    
-                    # ⭐⭐⭐ DÉTECTION BASÉE SUR LE CONTENU DU MESSAGE ⭐⭐⭐
-                    if "attente" in error_lower or "vérification" in error_lower or "verification" in error_lower:
-                        title = "⏳ COMPTE EN ATTENTE DE VÉRIFICATION"
-                        message = "Votre compte est en attente de validation.\n\n"
-                        message += "Pour activer votre compte, vous devez envoyer les documents suivants sur WhatsApp :\n"
-                        message += "• Photo du véhicule\n"
-                        message += "• Permis de conduire\n"
-                        message += "• Carte grise\n"
-                        message += "• Assurance\n\n"
-                        message += "⚠️ Si vous avez déjà envoyé vos documents, votre compte sera activé sous 2-4h. Merci de patienter.\n\n"
-                        message += "Cliquez sur 'ENVOYER SUR WHATSAPP' pour envoyer vos documents maintenant."
-                        self.show_error_popup(title, message, error_type='attente')
-                    elif "suspendu" in error_lower:
-                        title = "🚫 COMPTE SUSPENDU"
-                        message = "Votre compte a été suspendu.\n\nVeuillez contacter l'agence ZAHEL pour plus d'informations."
-                        self.show_error_popup(title, message, error_type='suspendu')
-                    elif "incorrect" in error_lower or "mot de passe" in error_lower or "401" in error_msg:
-                        title = "❌ IDENTIFIANTS INCORRECTS"
-                        message = "Immatricule ou mot de passe incorrect.\n\nVeuillez vérifier vos informations et réessayer."
-                        self.show_error_popup(title, message, error_type='identifiants')
-                    elif "404" in error_msg or "non trouvé" in error_lower:
-                        title = "🔍 COMPTE NON TROUVÉ"
-                        message = "Aucun compte n'est associé à cet immatricule.\n\nVeuillez créer un compte ou vérifier l'immatricule saisi."
-                        self.show_error_popup(title, message)
-                    else:
-                        title = "⚠️ ERREUR DE CONNEXION"
-                        message = f"{error_msg}\n\nVeuillez réessayer plus tard."
-                        self.show_error_popup(title, message)
-                    
+                    print(f"❌ Erreur connexion: {result.get('error')}")
             except Exception as e:
                 print(f"❌ Erreur API: {e}")
                 # Fallback à la simulation
@@ -1196,140 +951,6 @@ class LoginScreen(Screen):
             self.manager.current = "dashboard"
             self.manager.get_screen("dashboard").update_data()
 
-    def show_error_popup(self, title, message, error_type=None):
-        """Afficher un popup d'erreur avec un message clair et des actions"""
-        from kivy.uix.popup import Popup
-        from kivy.uix.label import Label
-        from kivy.uix.button import Button
-        from kivy.uix.boxlayout import BoxLayout
-        
-        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        
-        # ⭐ Couleur de fond selon le type d'erreur
-        if error_type == 'attente':
-            bg_color = (1, 0.95, 0.8, 1)  # Orange très clair
-            title_color = (1, 0.4, 0, 1)   # Orange
-        elif error_type == 'suspendu':
-            bg_color = (1, 0.8, 0.8, 1)    # Rouge clair
-            title_color = (1, 0.2, 0.2, 1) # Rouge
-        elif error_type == 'identifiants':
-            bg_color = (1, 0.9, 0.7, 1)    # Jaune clair
-            title_color = (1, 0.5, 0, 1)   # Orange
-        else:
-            bg_color = (0.95, 0.95, 0.95, 1)  # Gris clair
-            title_color = (0.8, 0.2, 0.2, 1)  # Rouge
-        
-        # Appliquer la couleur de fond
-        with content.canvas.before:
-            from kivy.graphics import Color, Rectangle
-            Color(*bg_color)
-            self._popup_bg = Rectangle(pos=content.pos, size=content.size)
-            content.bind(pos=self._update_popup_bg, size=self._update_popup_bg)
-        
-        # Titre du popup (en haut)
-        lbl_title = Label(
-            text=f"[b]{title}[/b]",
-            markup=True,
-            font_size='20sp',
-            color=title_color,
-            size_hint_y=None,
-            height=40,
-            halign='center',
-            valign='middle'
-        )
-        
-        # Message principal (avec retour à la ligne automatique)
-        lbl_message = Label(
-            text=message,
-            halign='center',
-            valign='middle',
-            font_size='15sp',
-            color=(0.2, 0.2, 0.2, 1)
-        )
-        lbl_message.bind(size=lbl_message.setter('text_size'))
-        
-        content.add_widget(lbl_title)
-        content.add_widget(lbl_message)
-        
-        # ⭐ Boutons selon le type d'erreur
-        btn_layout = BoxLayout(size_hint_y=None, height=50, spacing=10)
-        
-        if error_type == 'attente':
-            # Bouton WhatsApp (vert)
-            btn_whatsapp = Button(
-                text='📱 ENVOYER SUR WHATSAPP',
-                background_color=(0.1, 0.7, 0.1, 1),
-                color=(1, 1, 1, 1),
-                bold=True
-            )
-            btn_whatsapp.bind(on_press=self.ouvrir_whatsapp_verification)
-            
-            # Bouton OK (gris)
-            btn_ok = Button(
-                text='OK',
-                background_color=(0.5, 0.5, 0.5, 1),
-                color=(1, 1, 1, 1)
-            )
-            
-            btn_layout.add_widget(btn_ok)
-            btn_layout.add_widget(btn_whatsapp)
-        else:
-            # Bouton OK uniquement
-            btn_ok = Button(
-                text='OK',
-                background_color=(0.2, 0.6, 0.2, 1),
-                color=(1, 1, 1, 1),
-                size_hint=(0.5, 1),
-                pos_hint={'center_x': 0.5}
-            )
-            btn_layout.add_widget(btn_ok)
-        
-        content.add_widget(btn_layout)
-        
-        # ⭐ Taille adaptée selon le type d'erreur
-        if error_type == 'attente':
-            popup_height = 0.65  # Plus grand pour le message long
-        else:
-            popup_height = 0.45
-            
-        popup = Popup(
-            title='',
-            content=content,
-            size_hint=(0.9, popup_height),
-            auto_dismiss=False,
-            separator_height=0
-        )
-        
-        btn_ok.bind(on_press=popup.dismiss)
-        
-        popup.open()
-    
-    def _update_popup_bg(self, instance, value):
-        """Mettre à jour le fond du popup"""
-        if hasattr(self, '_popup_bg'):
-            self._popup_bg.pos = instance.pos
-            self._popup_bg.size = instance.size
-    
-    def ouvrir_whatsapp_verification(self, instance):
-        """Ouvrir WhatsApp pour envoyer les documents"""
-        import webbrowser
-        from urllib.parse import quote
-        
-        telephone_agence = "2693608657"
-        message = "Bonjour ZAHEL, je souhaite vérifier mon compte conducteur.\n\n"
-        message += "Immatricule: [Votre immatricule]\n\n"
-        message += "Je vais envoyer les documents suivants:\n"
-        message += "- Photo du véhicule\n"
-        message += "- Permis de conduire\n"
-        message += "- Carte grise\n"
-        message += "- Assurance\n\n"
-        message += "Merci de valider mon compte."
-        
-        message_encode = quote(message)
-        url = f"https://wa.me/{telephone_agence}?text={message_encode}"
-        webbrowser.open(url)
-        print(f"📱 WhatsApp ouvert pour vérification")
-
     def go_to_register(self, instance):
         """Aller à l'écran d'inscription conducteur"""
         print("📝 Redirection vers inscription conducteur")
@@ -1340,25 +961,6 @@ class LoginScreen(Screen):
             self.manager.add_widget(DriverRegisterScreen(name="driver_register"))
     
         self.manager.current = "driver_register"
-
-    def save_driver_session(self, immatricule, token):
-        """Sauvegarder la session conducteur"""
-        import json
-        import time
-    
-        session_data = {
-            'user_type': 'conducteur',
-            'identifier': immatricule,
-            'token': token,
-            'timestamp': time.time()
-        }
-    
-        try:
-            with open('session.json', 'w') as f:
-                json.dump(session_data, f)
-            print(f"✅ Session conducteur sauvegardée: {immatricule}")
-        except Exception as e:
-            print(f"❌ Erreur sauvegarde session: {e}")
 
 
 class DriverRegisterScreen(Screen):
@@ -1729,24 +1331,6 @@ class DriverRegisterScreen(Screen):
         content.add_widget(btn_ok)
         popup.open()
 
-    def ouvrir_whatsapp_verification(self, immatricule, categorie):
-        """Ouvrir WhatsApp pour envoyer les documents de vérification"""
-        import webbrowser
-        from urllib.parse import quote
-    
-        message = f"Bonjour ZAHEL, je souhaite vérifier mon compte conducteur.\n\nImmatricule: {immatricule}\nCatégorie: {categorie}\n\nJe vais envoyer les documents suivants:\n- Photo du véhicule\n- Permis de conduire\n- Carte grise\n- Assurance\n\nMerci de valider mon compte."
-    
-        message_encode = quote(message)
-        telephone_agence = "2693608657"  # Numéro WhatsApp de l'agence
-    
-        url = f"https://wa.me/{telephone_agence}?text={message_encode}"
-        webbrowser.open(url)
-    
-        print(f"📱 WhatsApp ouvert pour vérification: {immatricule}")
-    
-        # Afficher un message de confirmation
-        self.show_popup("📱 WhatsApp", "Ouvrez WhatsApp et envoyez vos documents. Votre compte sera activé sous 2-4h.", success=True)
-
 # ==================== ÉCRAN DASHBOARD ====================
 
 class DashboardScreen(Screen):
@@ -1831,7 +1415,7 @@ class DashboardScreen(Screen):
 
         # Fond gris pour la carte
         with stats_card.canvas.before:
-            Color(0, 0, 1, 1)  # Bleu pour la carte de statistiques
+            Color(0.9, 0.9, 0.9, 1)  # Gris clair
             self.stats_bg = Rectangle(pos=stats_card.pos, size=stats_card.size)
             stats_card.bind(pos=self.update_bg, size=self.update_bg)
 
@@ -2243,12 +1827,6 @@ class DashboardScreen(Screen):
 
         self.check_available_courses()
 
-    def auto_check_courses(self, dt):
-        """Vérifier automatiquement les courses disponibles"""
-        # Ne vérifier que si le conducteur est disponible
-        if hasattr(self, 'status_indicator') and self.status_indicator.color == [0, 1, 0, 1]:
-            self.check_available_courses()
-
     def check_available_courses(self):
         # ✅ AJOUTE AU DÉBUT
         global api_client, API_MODULE_EXISTS
@@ -2287,22 +1865,8 @@ class DashboardScreen(Screen):
             self.courses_label.color = (0.8, 0.2, 0.2, 1)  # Rouge
 
     def show_courses(self, instance):
-        """Affiche l'écran des courses et MARQUE les notifications comme lues"""
+        """Affiche l'écran des courses"""
         print("📋 Affichage des courses...")
-    
-        # ⭐⭐⭐ MARQUER TOUTES LES NOTIFICATIONS COMME LUES ⭐⭐⭐
-        try:
-            app = App.get_running_app()
-            if hasattr(app, 'api_client') and app.api_client:
-                result = app.api_client.marquer_toutes_notifications_lues()
-                if result.get('success'):
-                    print(f"✅ {result.get('count', 0)} notifications marquées comme lues")
-                    # Réinitialiser le compteur local
-                    self._last_notification_count = 0
-                    self.notification_badge.text = ""
-        except Exception as e:
-            print(f"⚠️ Erreur marquage notifications: {e}")
-    
         self.manager.current = "courses"
 
     def show_profile(self, instance):
@@ -2389,28 +1953,25 @@ class DashboardScreen(Screen):
         if platform == 'android':
             from android.permissions import check_permission, Permission
             if not check_permission(Permission.ACCESS_FINE_LOCATION):
+                # Afficher un petit rappel discret
                 self.show_info_message("📍 Activez la localisation pour utiliser la carte")
 
         print("📊 DashboardScreen.on_enter")
-
+    
         # 1. D'abord charger les données (ça va configurer le token)
         self.update_data()
-
+    
         # 2. ENSUITE vérifier le statut (maintenant le token est là)
         self.verifier_statut_avant_chargement()
-
-        # 3. Démarrer la vérification périodique des notifications
+    
+        # 3. Démarrer la vérification périodique
         Clock.schedule_interval(self.check_notifications, 30)
-
-        # 4. ⭐⭐⭐ NOUVEAU : Vérifier les courses disponibles toutes les 10 secondes ⭐⭐⭐
-        Clock.schedule_interval(self.auto_check_courses, 10)
     
     def on_leave(self):
         """Quand on quitte l'écran"""
-        # Arrêter TOUTES les vérifications périodiques
+        # Arrêter la vérification périodique
         Clock.unschedule(self.check_notifications)
-        Clock.unschedule(self.auto_check_courses)  # ⭐ NOUVEAU
-        print("⏹️ Vérifications arrêtées")
+        print("⏹️ Vérification notifications arrêtée")
     
     def check_notifications(self, dt=None):
         """Vérifie les nouvelles notifications - UNIQUEMENT SI ACTIF"""
@@ -2628,7 +2189,7 @@ class DashboardScreen(Screen):
         def contact_agence(instance):
             # Ouvrir WhatsApp ou téléphone
             import webbrowser
-            webbrowser.open('https://wa.me/2693608657')
+            webbrowser.open('https://wa.me/26934011111')
             popup.dismiss()
     
         btn_ok.bind(on_press=close_popup)
@@ -2700,23 +2261,30 @@ class DashboardScreen(Screen):
 
     def show_info_message(self, message):
         """Afficher un message d'information temporaire"""
-        # ⭐ CORRECTION : Utiliser un label qui existe
-        if hasattr(self, 'info_label'):
-            self.info_label.text = message
-            self.info_label.color = (0.2, 0.6, 0.8, 1)
-            Clock.schedule_once(lambda dt: setattr(self.info_label, 'text', ''), 3)
-        else:
-            print(f"ℹ️ {message}")
+        from kivy.clock import Clock
+    
+        # Sauvegarder le texte original
+        original_text = self.courses_label.text
+        original_color = self.courses_label.color
+    
+        # Afficher le message
+        self.courses_label.text = f"ℹ️ {message}"
+        self.cookies_label.color = (0.2, 0.6, 0.8, 1)
+    
+        # Restaurer après 5 secondes
+        def restore(dt):
+            self.courses_label.text = original_text
+            self.courses_label.color = original_color
+    
+        Clock.schedule_once(restore, 5)
 
 # ==================== ÉCRAN DES COURSES DISPONIBLES ====================
+
 
 class CoursesScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.layout = BoxLayout(orientation="vertical", padding=20, spacing=15)
-
-        # ⭐⭐⭐ CACHE POUR LES ADRESSES GÉOCODÉES ⭐⭐⭐
-        self.address_cache = {}
 
         # En-tête
         header = BoxLayout(orientation="horizontal", size_hint_y=None, height=60)
@@ -2785,9 +2353,10 @@ class CoursesScreen(Screen):
         self.load_available_courses()
 
     def load_available_courses(self):
-        """Charge les courses disponibles depuis l'API - VERSION PARALLÉLISÉE"""
+        # ✅ AJOUTE AU DÉBUT
         global api_client, API_MODULE_EXISTS
 
+        """Charge les courses disponibles depuis l'API - VERSION OPTIMISÉE"""
         print("🔍 Chargement des courses disponibles...")
 
         # Vider la liste actuelle
@@ -2795,7 +2364,7 @@ class CoursesScreen(Screen):
 
         # Ajouter un indicateur de chargement
         loading_label = Label(
-            text="🔄 Chargement des courses...",
+            text="Chargement des courses...",
             font_size=16,
             color=(0.5, 0.5, 0.5, 1),
             size_hint_y=None,
@@ -2803,77 +2372,30 @@ class CoursesScreen(Screen):
         )
         self.courses_container.add_widget(loading_label)
 
-        import threading
-        import concurrent.futures
+        try:
+            # Récupérer le client API
+            app = App.get_running_app()
 
-        def load_in_background():
-            try:
-                app = App.get_running_app()
-                if not hasattr(app, "api_client"):
-                    Clock.schedule_once(lambda dt: self.show_error("API non disponible"), 0)
-                    return
-
+            if hasattr(app, "api_client"):
                 response = app.api_client.get_available_courses_with_amendes()
-            
-                if not response.get("success"):
-                    Clock.schedule_once(lambda dt: self.show_error("Erreur API"), 0)
-                    return
+                print(f"📥 Réponse API: {response.get('count', 0)} courses")
 
-                courses = response.get("courses", [])
-                count = response.get("count", 0)
-            
-                print(f"✅ {count} course(s) disponible(s)")
+                # Retirer l'indicateur de chargement
+                self.courses_container.clear_widgets()
 
-                # ⭐⭐⭐ PRÉPARER TOUTES LES COORDONNÉES À GÉOCODER ⭐⭐⭐
-                coords_to_geocode = set()  # Utiliser un set pour éviter les doublons
-            
-                for course in courses:
-                    depart = course.get('depart', {})
-                    arrivee = course.get('arrivee', {})
-                
-                    if depart.get('lat') and depart.get('lng'):
-                        lat = round(depart['lat'], 3)
-                        lng = round(depart['lng'], 3)
-                        coords_to_geocode.add((lat, lng, 'depart', course['code']))
-                
-                    if arrivee.get('lat') and arrivee.get('lng'):
-                        lat = round(arrivee['lat'], 3)
-                        lng = round(arrivee['lng'], 3)
-                        coords_to_geocode.add((lat, lng, 'arrivee', course['code']))
-            
-                print(f"📍 {len(coords_to_geocode)} coordonnées uniques à géocoder")
-            
-                # ⭐⭐⭐ GÉOCODER TOUT EN PARALLÈLE ⭐⭐⭐
-                def geocode_single(coord_info):
-                    lat, lng, _, _ = coord_info
-                    cache_key = f"{lat},{lng}"
-                
-                    if cache_key in self.address_cache:
-                        return (cache_key, self.address_cache[cache_key])
-                
-                    try:
-                        address = self.reverse_geocode_address(lat, lng)
-                        return (cache_key, address)
-                    except Exception as e:
-                        print(f"⚠️ Erreur géocodage {lat},{lng}: {e}")
-                        return (cache_key, f"{lat},{lng}")
-            
-                # Exécuter en parallèle (max 10 workers)
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                    futures = {executor.submit(geocode_single, coord): coord for coord in coords_to_geocode}
-                
-                    for future in concurrent.futures.as_completed(futures):
-                        cache_key, address = future.result()
-                        if cache_key not in self.address_cache:
-                            self.address_cache[cache_key] = address
-                            print(f"   💾 Cache: {cache_key} → {address[:30]}")
-            
-                print(f"✅ Géocodage terminé - {len(self.address_cache)} adresses en cache")
-            
-                # ⭐⭐⭐ MAINTENANT, CONSTRUIRE L'INTERFACE ⭐⭐⭐
-                def build_ui(dt):
-                    self.courses_container.clear_widgets()
-                
+                if response.get("success"):
+                    courses = response.get("courses", [])
+                    count = response.get("count", 0)
+
+                    # DEBUG : Afficher la structure d'une course
+                    if courses and len(courses) > 0:
+                        print("🔍 Structure d'une course:")
+                        print(f"   Code: {courses[0].get('code')}")
+                        print(f"   Depart: {courses[0].get('depart')}")
+                        print(f"   Arrivee: {courses[0].get('arrivee')}")
+
+                    print(f"✅ {count} course(s) disponible(s)")
+
                     if count == 0:
                         self.courses_container.add_widget(
                             Label(
@@ -2884,115 +2406,85 @@ class CoursesScreen(Screen):
                                 height=100,
                             )
                         )
-                        return
-                
-                    # Afficher les stats du cache
-                    cache_size = len(self.address_cache)
-                    stats_label = Label(
-                        text=f"📊 {count} courses | Cache: {cache_size} adresses",
-                        size_hint_y=None,
-                        height=30,
-                        color=(0.2, 0.6, 0.2, 1),
-                        font_size='12sp'
+
+                        # Bouton de rafraîchissement
+                        refresh_btn = Button(
+                            text="🔄 Rafraîchir",
+                            size_hint_y=None,
+                            height=40,
+                            background_color=(0.2, 0.4, 0.8, 1),
+                        )
+                        refresh_btn.bind(on_press=self.refresh_courses)
+                        self.courses_container.add_widget(refresh_btn)
+                    else:
+                        for course in courses:
+                            # ✅ APPEL SANS MARQUAGE INDIVIDUEL
+                            self.add_course_card(course)
+                else:
+                    error_msg = response.get("error", "Erreur inconnue")
+                    print(f"❌ Erreur API: {error_msg}")
+                    self.courses_container.add_widget(
+                        Label(
+                            text=f"⚠️ Erreur: {error_msg}",
+                            font_size=16,
+                            color=(0.8, 0.2, 0.2, 1),
+                            size_hint_y=None,
+                            height=100,
+                        )
                     )
-                    self.courses_container.add_widget(stats_label)
-                
-                    # Ajouter les cartes de course (maintenant que le cache est plein)
-                    for course in courses:
-                        self.add_course_card(course)
-                
-                    print(f"✅ Interface construite avec {count} courses")
-            
-                Clock.schedule_once(build_ui, 0)
-            
-            except Exception as e:
-                print(f"❌ Erreur chargement courses: {e}")
-                import traceback
-                traceback.print_exc()
-                Clock.schedule_once(lambda dt: self.show_error(str(e)), 0)
+            else:
+                print("❌ API Client non disponible")
+                self.courses_container.clear_widgets()
+                self.courses_container.add_widget(
+                    Label(
+                        text="Client API non initialisé",
+                        font_size=16,
+                        color=(0.8, 0.2, 0.2, 1),
+                        size_hint_y=None,
+                        height=100,
+                    )
+                )
 
-        # Lancer le chargement en arrière-plan
-        threading.Thread(target=load_in_background, daemon=True).start()
-
-    def reverse_geocode_address(self, lat, lng):
-        """
-        Convertir des coordonnées GPS en adresse lisible (AVEC CACHE OPTIMISÉ)
-        """
-        if not lat or not lng:
-            return "Adresse non disponible"
-
-        # Arrondir à 3 décimales (précision ~100m)
-        cache_key = f"{round(lat, 3)},{round(lng, 3)}"
-
-        # 1. VÉRIFIER LE CACHE D'ABORD
-        if cache_key in self.address_cache:
-            return self.address_cache[cache_key]
-
-        print(f"📍 Géocodage: ({lat:.4f}, {lng:.4f})")
-
-        # 2. APPELER LE PROXY NOMINATIM (plus rapide que l'API client)
-        try:
-            import requests
-            url = "http://zahel-comores.com:5002/reverse"
-            params = {'lat': lat, 'lng': lng}
-        
-            response = requests.get(url, params=params, timeout=5) 
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('display_name'):
-                    # Prendre la première partie de l'adresse
-                    parts = data['display_name'].split(',')
-                    address = parts[0].strip() if parts else data['display_name']
-                    self.address_cache[cache_key] = address
-                    return address
         except Exception as e:
-            print(f"⚠️ Erreur proxy Nominatim: {e}")
-
-        # 3. FALLBACK: API client
-        global api_client
-        try:
-            if api_client and hasattr(api_client, 'reverse_geocode'):
-                result = api_client.reverse_geocode(lat, lng)
-                if result.get('success'):
-                    address = result.get('address', '')
-                    if address:
-                        parts = address.split(',')
-                        short_address = parts[0].strip() if parts else address
-                        self.address_cache[cache_key] = short_address
-                        return short_address
-        except Exception as e:
-            print(f"⚠️ Erreur API client: {e}")
-
-        # 4. Fallback ultime
-        fallback = f"{lat:.4f}, {lng:.4f}"
-        self.address_cache[cache_key] = fallback
-        return fallback
+            print(f"❌ Erreur chargement courses: {e}")
+            self.courses_container.clear_widgets()
+            self.courses_container.add_widget(
+                Label(
+                    text="💥 Impossible de contacter le serveur",
+                    font_size=16,
+                    color=(0.8, 0.2, 0.2, 1),
+                    size_hint_y=None,
+                    height=100,
+                )
+            )
 
     def add_course_card(self, course):
-        """Ajoute une carte de course détaillée avec VRAIES ADRESSES (CACHE)"""
+        """Ajoute une carte de course détaillée avec téléphone client (Variante B)"""
         print(f"🛠️ Création carte pour: {course.get('code')}")
 
         # Carte principale
         card = BoxLayout(
-            orientation="vertical",
-            size_hint_y=None,
-            height=300,
-            padding=[15, 15, 15, 15],
+            orientation="vertical", 
+            size_hint_y=None, 
+            height=340,  # Assez haut pour toutes les infos
+            padding=[15, 15, 15, 15], 
             spacing=8
         )
 
-        # Fond blanc avec bord arrondi
+        # Fond blanc avec bord arrondi (simulé)
         with card.canvas.before:
             from kivy.graphics import Color, Rectangle
-
+        
+            # Fond blanc
             Color(1, 1, 1, 1)
             card_bg = Rectangle(pos=card.pos, size=card.size)
-
+        
+            # Bordure grise
             Color(0.9, 0.9, 0.9, 1)
-            Rectangle(pos=(card.x, card.y), size=(card.width, 2))
-            Rectangle(pos=(card.x, card.y + card.height - 2), size=(card.width, 2))
-            Rectangle(pos=(card.x, card.y), size=(2, card.height))
-            Rectangle(pos=(card.x + card.width - 2, card.y), size=(2, card.height))
+            Rectangle(pos=(card.x, card.y), size=(card.width, 2))  # Haut
+            Rectangle(pos=(card.x, card.y + card.height - 2), size=(card.width, 2))  # Bas
+            Rectangle(pos=(card.x, card.y), size=(2, card.height))  # Gauche
+            Rectangle(pos=(card.x + card.width - 2, card.y), size=(2, card.height))  # Droite
 
             def update_bg(instance, value):
                 card_bg.pos = instance.pos
@@ -3000,9 +2492,9 @@ class CoursesScreen(Screen):
 
             card.bind(pos=update_bg, size=update_bg)
 
-        # ===== LIGNE 1 : Code + Âge =====
+        # ===== LIGNE 1 : Code + Âge de la course =====
         line1 = BoxLayout(size_hint=(1, 0.1))
-
+    
         code_label = Label(
             text=f"🚖 [b]{course.get('code', 'N/A')}[/b]",
             markup=True,
@@ -3011,16 +2503,17 @@ class CoursesScreen(Screen):
             size_hint=(0.7, 1),
             color=(0, 0, 0, 1)
         )
-
+    
+        # Âge de la course (simulé pour l'instant)
         import random
         age_min = random.randint(1, 8)
         if age_min > 5:
-            age_color = (0.8, 0.2, 0.2, 1)
+            age_color = (0.8, 0.2, 0.2, 1)  # Rouge si vieux
             age_text = f"⚠️ {age_min} min"
         else:
-            age_color = (0.4, 0.4, 0.4, 1)
+            age_color = (0.4, 0.4, 0.4, 1)  # Gris normal
             age_text = f"⏱️ {age_min} min"
-
+    
         age_label = Label(
             text=f"[color={age_color[0]},{age_color[1]},{age_color[2]}]{age_text}[/color]",
             markup=True,
@@ -3028,18 +2521,18 @@ class CoursesScreen(Screen):
             font_size='12sp',
             size_hint=(0.3, 1)
         )
-
+    
         line1.add_widget(code_label)
         line1.add_widget(age_label)
 
-        # ===== LIGNE 2 : Client =====
+        # ===== LIGNE 2 : Client (Nom + Note) =====
         client = course.get('client', {})
         client_nom = client.get('nom', 'Client')
         client_note = client.get('note_moyenne', 4.8)
         client_courses = client.get('courses_effectuees', 127)
-
+    
         client_row = BoxLayout(size_hint=(1, 0.1))
-
+    
         client_row.add_widget(Label(
             text=f"👤 [b]{client_nom}[/b]",
             markup=True,
@@ -3048,7 +2541,7 @@ class CoursesScreen(Screen):
             size_hint=(0.6, 1),
             color=(0, 0, 0, 1)
         ))
-
+    
         client_row.add_widget(Label(
             text=f"⭐ [b]{client_note}[/b] ({client_courses})",
             markup=True,
@@ -3058,31 +2551,41 @@ class CoursesScreen(Screen):
             color=(0.8, 0.5, 0, 1)
         ))
 
-        # ===== LIGNE 4 : Itinéraire (AVEC CACHE) =====
+        # ===== LIGNE 3 : TÉLÉPHONE CLIENT (NOUVEAU) =====
+        client_tel = client.get('telephone', '+269 XXX XXX')
+    
+        tel_row = BoxLayout(size_hint=(1, 0.1))
+        tel_btn = Button(
+            text=f"📞 [color=1565C0][b]{client_tel}[/b][/color]",
+            markup=True,
+            background_color=(1, 1, 1, 1),
+            color=(0, 0, 0, 1),
+            size_hint=(1, 1),
+            halign='left'
+        )
+        tel_btn.bind(on_press=lambda x: self.copy_phone(client_tel))
+        tel_row.add_widget(tel_btn)
+
+        # ===== LIGNE 4 : Itinéraire =====
         trajet_box = BoxLayout(orientation='vertical', size_hint=(1, 0.2), spacing=2)
 
+        # ⭐ RÉCUPÉRER LES VRAIES ADRESSES DE LA COURSE
         depart = course.get('depart', {})
         arrivee = course.get('arrivee', {})
 
-        depart_lat = depart.get('lat')
-        depart_lng = depart.get('lng')
-        arrivee_lat = arrivee.get('lat')
-        arrivee_lng = arrivee.get('lng')
+        # Adresse de départ
+        depart_adr = depart.get('adresse', 'Non spécifiée')
+        if isinstance(depart_adr, dict):
+            depart_adr = depart_adr.get('adresse', 'Non spécifiée')
 
-        # ⭐⭐⭐ UTILISER LE CACHE POUR LES ADRESSES ⭐⭐⭐
-        if depart_lat and depart_lng:
-            depart_adr = self.reverse_geocode_address(depart_lat, depart_lng)
-        else:
-            depart_adr = "Non spécifiée"
-
-        if arrivee_lat and arrivee_lng:
-            arrivee_adr = self.reverse_geocode_address(arrivee_lat, arrivee_lng)
-        else:
-            arrivee_adr = "Non spécifiée"
-
-        # Tronquer si trop long
         if len(str(depart_adr)) > 25:
             depart_adr = str(depart_adr)[:22] + "..."
+
+        # Adresse d'arrivée
+        arrivee_adr = arrivee.get('adresse', 'Non spécifiée')
+        if isinstance(arrivee_adr, dict):
+            arrivee_adr = arrivee_adr.get('adresse', 'Non spécifiée')
+
         if len(str(arrivee_adr)) > 25:
             arrivee_adr = str(arrivee_adr)[:22] + "..."
 
@@ -3104,13 +2607,14 @@ class CoursesScreen(Screen):
             color=(0.8, 0.2, 0.2, 1)
         ))
 
-        # ===== LIGNE 5 : Stats =====
+        # ===== LIGNE 5 : Stats course (Distance, Temps, Prix) =====
         stats_box = BoxLayout(size_hint=(1, 0.15), spacing=5)
-
+    
         distance = course.get('distance_km', 8.5)
         duree = course.get('duree_estimee', 12)
         prix = course.get('prix_convenu', 0)
-
+    
+        # Distance
         stats_box.add_widget(Label(
             text=f"🛣️ [b]{distance} km[/b]",
             markup=True,
@@ -3118,7 +2622,8 @@ class CoursesScreen(Screen):
             size_hint=(0.33, 1),
             color=(0.3, 0.3, 0.3, 1)
         ))
-
+    
+        # Durée
         stats_box.add_widget(Label(
             text=f"⏱️ [b]{duree} min[/b]",
             markup=True,
@@ -3126,7 +2631,8 @@ class CoursesScreen(Screen):
             size_hint=(0.33, 1),
             color=(0.3, 0.3, 0.3, 1)
         ))
-
+    
+        # Prix (sans taxes)
         stats_box.add_widget(Label(
             text=f"💰 [b]{prix:,.0f} KMF[/b]",
             markup=True,
@@ -3135,13 +2641,13 @@ class CoursesScreen(Screen):
             color=(0, 0.6, 0, 1)
         ))
 
-        # ===== LIGNE 6 : Catégorie =====
+        # ===== LIGNE 6 : Catégorie uniquement =====
         categorie = course.get('categorie', 'standard')
         cat_icons = {'standard': '🚗', 'confort': '✨', 'luxe': '⭐', 'moto': '🏍️'}
         cat_icon = cat_icons.get(categorie, '🚗')
-
+    
         cat_row = BoxLayout(size_hint=(1, 0.1))
-
+    
         cat_colors = {
             'standard': (0.3, 0.3, 0.3, 1),
             'confort': (0.8, 0.5, 0.2, 1),
@@ -3149,7 +2655,7 @@ class CoursesScreen(Screen):
             'moto': (0.2, 0.5, 0.8, 1)
         }
         cat_color = cat_colors.get(categorie, (0.3, 0.3, 0.3, 1))
-
+    
         cat_label = Label(
             text=f"{cat_icon} [b]{categorie.upper()}[/b]",
             markup=True,
@@ -3158,7 +2664,7 @@ class CoursesScreen(Screen):
         )
         cat_row.add_widget(cat_label)
 
-        # ===== LIGNE 7 : Bouton Accepter =====
+        # ===== LIGNE 7 : BOUTON ACCEPTATION =====
         accept_btn = Button(
             text="[size=16][b]✅ ACCEPTER CETTE COURSE[/b][/size]",
             markup=True,
@@ -3174,6 +2680,7 @@ class CoursesScreen(Screen):
         # ===== ASSEMBLAGE FINAL =====
         card.add_widget(line1)
         card.add_widget(client_row)
+        card.add_widget(tel_row)  # ⭐ NOUVEAU : téléphone visible
         card.add_widget(trajet_box)
         card.add_widget(stats_box)
         card.add_widget(cat_row)
@@ -3182,71 +2689,50 @@ class CoursesScreen(Screen):
         self.courses_container.add_widget(card)
         print(f"✅ Carte ajoutée pour {course.get('code')}")
 
-    def copy_phone(self, phone_number):
-        """Copier le numéro dans le presse-papier"""
-        from kivy.core.clipboard import Clipboard
-        Clipboard.copy(phone_number)
-
-        from kivy.uix.popup import Popup
-        from kivy.uix.label import Label
-
-        popup = Popup(
-            title='📋 Copié',
-            content=Label(text='Numéro copié dans le presse-papier'),
-            size_hint=(0.6, 0.3)
-        )
-        popup.open()
-
     def accept_course(self, course):
+        # ✅ AJOUTE AU DÉBUT
+        global api_client, API_MODULE_EXISTS
         """Accepte une course et va à l'écran de navigation"""
         print(f"✅ Tentative d'acceptation: {course.get('code')}")
 
+         # ✅ VÉRIFICATION PRÉALABLE
         try:
+            verif = api_client.verifier_statut_conducteur()
+            if not verif.get('peut_accepter', True):
+                self.show_error(verif.get('message', 'Impossible d\'accepter une course'))
+                return
+        except Exception as e:
+            print(f"⚠️ Erreur vérification préalable: {e}")
+
+        try:
+            # IMPORT en premier !
             from kivy.app import App
+
+            # 1. Récupérer l'application
             app = App.get_running_app()
 
+            # 2. Appeler l'API pour accepter la course
             if hasattr(app, "api_client"):
                 response = app.api_client.accept_course(course["code"])
 
                 if response.get("success"):
                     print("🎉 Course acceptée avec succès!")
 
-                    course_data = response.get('course', {})
-                    depart = course_data.get('depart', {})
-                    arrivee = course_data.get('arrivee', {})
-
-                    # ⭐ RÉCUPÉRER LE TÉLÉPHONE DU CLIENT
-                    client = course.get('client', {})
-                    client_phone = client.get('telephone') or client.get('telephone_proxy')
-
-                    depart_coords = (depart.get('lat'), depart.get('lng'))
-                    arrivee_coords = (arrivee.get('lat'), arrivee.get('lng'))
-
-                    print(f"📍 Départ: {depart_coords}")
-                    print(f"📍 Arrivée: {arrivee_coords}")
-
+                    # 3. Stocker la course dans l'application principale
                     app.current_course = course.get("code")
-                    app.current_course_coords = {
-                        'depart': depart_coords,
-                        'arrivee': arrivee_coords,
-                        'prix': course_data.get('prix', 0),
-                        'adresse_depart': depart.get('adresse', ''),
-                        'adresse_arrivee': arrivee.get('adresse', ''),
-                        'client_phone': client_phone
-                    }
 
-                    print(f"💾 Coordonnées stockées: {app.current_course_coords}")
-
+                    # 4. Aller à l'écran de navigation
                     if "navigation" in self.manager.screen_names:
                         self.manager.current = "navigation"
                     else:
-                        print("❌ Écran navigation non trouvé")
+                        print("❌ Écran navigation non trouvé, retour au dashboard")
                         self.manager.current = "dashboard"
 
                 else:
                     error_msg = response.get("error", "Erreur inconnue")
                     print(f"❌ Erreur d'acceptation: {error_msg}")
                     self.show_error(f"Erreur: {error_msg}")
+
             else:
                 print("❌ API client non disponible")
                 self.show_error("Erreur: API non disponible")
@@ -3254,6 +2740,7 @@ class CoursesScreen(Screen):
         except Exception as e:
             print(f"❌ Exception accept_course: {e}")
             import traceback
+
             traceback.print_exc()
 
     def show_error(self, message):
@@ -3282,6 +2769,125 @@ class CoursesScreen(Screen):
         close_btn.bind(on_press=popup.dismiss)
         content.add_widget(close_btn)
         popup.open()
+
+    def display_course_card(self, course):
+        """Affiche une carte de course avec amende si présente"""
+    
+        # Créer le conteneur principal
+        card = BoxLayout(
+            orientation='vertical', 
+            size_hint_y=None, 
+            height=140 if course.get('amende_incluse') else 110,
+            padding=[10, 5],
+            spacing=5
+        )
+    
+        # Style différent si amende
+        if course.get('amende_incluse'):
+            with card.canvas.before:
+                Color(1, 0.9, 0.9, 1)  # Fond rose clair pour amende
+                Rectangle(pos=card.pos, size=card.size)
+        else:
+            with card.canvas.before:
+                Color(0.95, 0.95, 0.95, 1)  # Fond gris normal
+                Rectangle(pos=card.pos, size=card.size)
+    
+        # Ligne 1: Trajet
+        trajet_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=30)
+    
+        depart_label = Label(
+            text=f"[b]Départ:[/b] {course.get('depart_lat', 'N/A')}, {course.get('depart_lng', 'N/A')}",
+            markup=True,
+            size_hint_x=0.5,
+            halign='left',
+            text_size=(200, None)
+        )
+    
+        arrivee_label = Label(
+            text=f"[b]Arrivée:[/b] {course.get('arrivee_lat', 'N/A')}, {course.get('arrivee_lng', 'N/A')}",
+            markup=True,
+            size_hint_x=0.5,
+            halign='left',
+            text_size=(200, None)
+        )
+    
+        trajet_box.add_widget(depart_label)
+        trajet_box.add_widget(arrivee_label)
+    
+        # Ligne 2: Prix et distance
+        info_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=25)
+    
+        prix_text = f"[b]Prix:[/b] {course.get('prix_convenu', 0)} KMF"
+    
+        # ✅ AJOUTER L'INFO AMENDE SI PRÉSENTE
+        if course.get('amende_incluse'):
+            prix_text += f"\n[color=ff0000][b]+ Amende: {course['montant_amende']} KMF[/b][/color]"
+    
+        prix_label = Label(
+            text=prix_text,
+            markup=True,
+            size_hint_x=0.5
+        )
+    
+        distance_label = Label(
+            text=f"[b]Distance:[/b] {course.get('distance_km', 'N/A')} km",
+            markup=True,
+            size_hint_x=0.5
+        )
+    
+        info_box.add_widget(prix_label)
+        info_box.add_widget(distance_label)
+    
+        # Ligne 3: Client et bouton
+        action_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=30)
+    
+        client_label = Label(
+            text=f"[b]Client:[/b] {course.get('client', {}).get('nom', 'N/A')}",
+            markup=True,
+            size_hint_x=0.6
+        )
+    
+        # ✅ NOUVEAU TEXTE BOUTON SI AMENDE
+        btn_text = "ACCEPTER"
+        if course.get('amende_incluse'):
+            btn_text = f"ACCEPTER ({course['prix_total']} KMF)"
+    
+        accept_btn = Button(
+            text=btn_text,
+            size_hint_x=0.4,
+            size_hint_y=None,
+            height=25,
+            background_color=(0.2, 0.6, 0.2, 1) if not course.get('amende_incluse') else (0.8, 0.3, 0.3, 1)
+        )
+    
+        # Stocker le code de la course dans le bouton
+        accept_btn.course_code = course['code']
+        accept_btn.course_data = course  # Stocker toutes les données
+        accept_btn.bind(on_press=self.accept_course)
+    
+        action_box.add_widget(client_label)
+        action_box.add_widget(accept_btn)
+    
+        # Ajouter tout au card
+        card.add_widget(trajet_box)
+        card.add_widget(info_box)
+        card.add_widget(action_box)
+    
+        # ✅ LIGNE SUPPLÉMENTAIRE POUR AMENDE
+        if course.get('amende_incluse'):
+            amende_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=25)
+        
+            amende_label = Label(
+                text=f"[color=ff0000][b]⚠️ AMENDE À COLLECTER: {course['montant_amende']} KMF[/b][/color]",
+                markup=True,
+                size_hint_x=1,
+                halign='center'
+            )
+        
+            amende_box.add_widget(amende_label)
+            card.add_widget(amende_box)
+    
+        return card
 
 
 # ==================== ÉCRAN AMENDES COLLECTÉES ====================
@@ -5492,8 +5098,6 @@ class SelectionScreen(Screen):
 
 
 class ClientHomeScreen(Screen):
-    """Écran d'accueil client - Version simplifiée (sans champs de recherche)"""
-    
     def __init__(self, **kwargs):
         super(ClientHomeScreen, self).__init__(**kwargs)
 
@@ -5501,20 +5105,20 @@ class ClientHomeScreen(Screen):
         main_layout = BoxLayout(orientation="vertical", spacing=10)
 
         # ========== EN-TÊTE ==========
-        header = BoxLayout(size_hint=(1, 0.08), padding=[10, 5, 10, 5])
+        header = BoxLayout(size_hint=(1, 0.1), padding=[10, 5, 10, 5])
 
-        btn_menu = Button(
-            text="☰",
+        btn_back = Button(
+            text="←",
             size_hint=(0.1, 1),
-            font_size="24sp",
+            font_size="20sp",
             background_color=(0.2, 0.5, 0.8, 1),
         )
-        btn_menu.bind(on_press=self.show_menu)
+        btn_back.bind(on_press=self.go_back)
 
         lbl_title = Label(
-            text=f"[b]ZAHEL {_('client_mode')}[/b]",
+            text=f"[b]{_('app_name')} {_('client_mode')}[/b]",
             markup=True,
-            font_size="20sp",
+            font_size="22sp",
             halign="left",
             valign="middle",
             size_hint=(0.8, 1),
@@ -5523,183 +5127,141 @@ class ClientHomeScreen(Screen):
         btn_account = Button(text="👤", size_hint=(0.1, 1), font_size="20sp")
         btn_account.bind(on_press=self.show_account)
 
-        header.add_widget(btn_menu)
+        header.add_widget(btn_back)
         header.add_widget(lbl_title)
         header.add_widget(btn_account)
 
-        # ========== MESSAGE DE BIENVENUE ==========
-        welcome_section = BoxLayout(
+        # ========== SECTION RECHERCHE ==========
+        search_section = BoxLayout(
             orientation="vertical",
-            size_hint=(1, 0.12),
-            padding=[20, 5, 20, 5]
+            size_hint=(1, 0.3),
+            padding=[20, 10, 20, 10],
+            spacing=15,
         )
-        
-        self.lbl_welcome = Label(
-            text=f"[size=18]Bonjour ![/size]\n[size=14]Où souhaitez-vous aller aujourd'hui ?[/size]",
+
+        lbl_search_title = Label(
+            text=f"[size=18][b]{_('where_to')}[/b][/size]",
             markup=True,
-            halign="center",
-            valign="middle"
-        )
-        welcome_section.add_widget(self.lbl_welcome)
-
-        # ========== BOUTON PRINCIPAL "COMMANDER UNE COURSE" ==========
-        main_order_section = BoxLayout(
-            orientation="vertical",
-            size_hint=(1, 0.25),
-            padding=[30, 10, 30, 10],
-            spacing=10
+            halign="left",
+            size_hint=(1, 0.3),
         )
 
-        # Gros bouton Commander
-        btn_order_now = Button(
-            text=f"[size=22][b]🚕 COMMANDER UNE COURSE[/b][/size]\n[size=13]Choisissez votre trajet sur la carte[/size]",
+        self.txt_destination = TextInput(
+            hint_text=_('destination') + "...",
+            multiline=False,
+            size_hint=(1, 0.4),
+            font_size="16sp",
+            padding=[15, 10],
+            background_color=(1, 1, 1, 0.9),
+        )
+
+        btn_show_map = Button(
+            text=f"[size=16]🗺️  {_('select_on_map')}[/size]", 
             markup=True,
-            size_hint=(1, 0.7),
-            background_color=(0.8, 0.2, 0.2, 1),
-            color=(1, 1, 1, 1),
-            pos_hint={"center_x": 0.5}
+            size_hint=(1, 0.3),
+            background_color=(0.2, 0.5, 0.8, 1),
         )
-        btn_order_now.bind(on_press=self.go_to_map_selection)
+        btn_show_map.bind(on_press=self.show_on_map)
 
-        main_order_section.add_widget(Label(size_hint=(1, 0.15)))  # Espaceur haut
-        main_order_section.add_widget(btn_order_now)
-        main_order_section.add_widget(Label(size_hint=(1, 0.15)))  # Espaceur bas
+        search_section.add_widget(lbl_search_title)
+        search_section.add_widget(self.txt_destination)
+        search_section.add_widget(btn_show_map)
 
         # ========== ADRESSES FRÉQUENTES ==========
         frequent_section = BoxLayout(
             orientation="vertical",
-            size_hint=(1, 0.35),
-            padding=[20, 5, 20, 5],
-            spacing=8,
+            size_hint=(1, 0.3),
+            padding=[20, 0, 20, 10],
+            spacing=10,
         )
 
-        # En-tête de la section adresses
-        addr_header = BoxLayout(size_hint=(1, 0.15))
-        
         lbl_frequent = Label(
-            text=f"[size=15][b]📍 {_('my_addresses')}[/b][/size]",
+            text=f"[size=16][b]{_('my_addresses')}[/b][/size]",
             markup=True,
             halign="left",
-            size_hint=(0.7, 1)
+            size_hint=(1, 0.3),
         )
-        
+
+        self.address_container = GridLayout(cols=2, spacing=10, size_hint=(1, 0.7))
+        self.address_container.bind(minimum_height=self.address_container.setter('height'))
+
         btn_add_address = Button(
-            text="➕ Ajouter",
-            size_hint=(0.3, 0.8),
+            text=f"➕ {_('add_address')}",
+            size_hint=(1, 0.3),
             background_color=(0.2, 0.6, 0.2, 1),
-            color=(1, 1, 1, 1),
-            pos_hint={"center_y": 0.5}
+            color=(1, 1, 1, 1)
         )
         btn_add_address.bind(on_press=self.show_add_address_popup)
-        
-        addr_header.add_widget(lbl_frequent)
-        addr_header.add_widget(btn_add_address)
 
-        # Conteneur des adresses (scrollable)
-        addr_scroll = ScrollView(size_hint=(1, 0.85))
-        self.address_container = GridLayout(cols=2, spacing=8, size_hint_y=None)
-        self.address_container.bind(minimum_height=self.address_container.setter('height'))
-        addr_scroll.add_widget(self.address_container)
+        frequent_section.add_widget(lbl_frequent)
+        frequent_section.add_widget(self.address_container)
+        frequent_section.add_widget(btn_add_address)
 
-        frequent_section.add_widget(addr_header)
-        frequent_section.add_widget(addr_scroll)
+        # ========== BOUTON COMMANDER ==========
+        btn_order = Button(
+            text=f"[size=20][b]{_('order_ride')}[/b][/size]",
+            markup=True,
+            size_hint=(1, 0.15),
+            background_color=(0.8, 0.2, 0.2, 1),
+            color=(1, 1, 1, 1),
+            pos_hint={"center_x": 0.5},
+        )
+        btn_order.bind(on_press=self.order_ride)
 
         # ========== MENU BAS ==========
         bottom_menu = BoxLayout(
-            size_hint=(1, 0.08), spacing=15, padding=[20, 5, 20, 5]
+            size_hint=(1, 0.08), spacing=20, padding=[20, 5, 20, 10]
         )
 
         menu_items = [
-            ("🏠", _('home'), lambda x: None),
+            ("🏠", _('home'), self.go_home),
             ("📜", _('my_rides'), self.show_history),
-            ("⚙️", _('settings'), self.show_account),
+            ("👤", _('my_account'), self.show_account),
         ]
 
         for icon, text, callback in menu_items:
             btn = Button(
-                text=f"{icon}\n[size=9]{text}[/size]", 
-                markup=True, 
-                size_hint=(0.25, 1),
-                background_color=(0.95, 0.95, 0.95, 1) if text == _('home') else (1, 1, 1, 1)
+                text=f"{icon}\n[size=10]{text}[/size]", markup=True, size_hint=(0.25, 1)
             )
             btn.bind(on_press=callback)
             bottom_menu.add_widget(btn)
 
         # Ajout de tous les widgets au layout principal
         main_layout.add_widget(header)
-        main_layout.add_widget(welcome_section)
-        main_layout.add_widget(main_order_section)
+        main_layout.add_widget(search_section)
         main_layout.add_widget(frequent_section)
+        main_layout.add_widget(btn_order)
         main_layout.add_widget(bottom_menu)
 
         self.add_widget(main_layout)
 
-        # Variables pour la localisation
-        self.current_lat = None
-        self.current_lon = None
-
-        # Charger les adresses après l'initialisation
         Clock.schedule_once(lambda dt: self.load_client_adresses(), 1)
-        Clock.schedule_once(lambda dt: self.load_profile(), 1.5)
 
-    # ========== MÉTHODES ==========
+    def load_profile(self, dt):
+        """Charger le profil du client CONNECTÉ"""
+        global api_client
     
-    def load_profile(self, dt=None):
-        """Charger le profil du client pour le message de bienvenue"""
+        # ✅ Récupérer les données de l'APP (pas de la session)
         app = App.get_running_app()
-
+    
         if hasattr(app, 'client_data') and app.client_data:
             client = app.client_data
-            # ⭐ Récupérer le prénom (premier mot du nom complet)
-            nom_complet = client.get('nom', '')
-            prenom = nom_complet.split()[0] if nom_complet else 'Client'
-        
-            # ⭐ Afficher "Bonjour [Prénom] !"
-            self.lbl_welcome.text = f"[size=18]Bonjour {prenom} ![/size]\n[size=14]Où souhaitez-vous aller aujourd'hui ?[/size]"
+            self.lbl_name.text = f"[b]{client.get('nom', 'Client ZAHEL')}[/b]"
+            self.lbl_phone.text = f"📱 {client.get('telephone', 'Numéro inconnu')}"
             print(f"👤 Profil chargé: {client.get('nom')} - {client.get('telephone')}")
         else:
-            # Fallback si pas de données
-            self.lbl_welcome.text = f"[size=18]Bonjour ![/size]\n[size=14]Où souhaitez-vous aller aujourd'hui ?[/size]"
-    
-    def go_to_map_selection(self, instance):
-        """Aller directement à la carte de sélection Mapbox"""
-        print("🗺️ Redirection vers MapSelectionScreen (Mapbox)")
-        if 'map_selection' not in self.manager.screen_names:
-            from map_selection_screen import MapSelectionScreen as MapboxSelectionScreen
-            self.manager.add_widget(MapboxSelectionScreen(name='map_selection'))
-        self.manager.current = 'map_selection'
-
-    def show_menu(self, instance):
-        """Afficher le menu latéral (redirige vers compte)"""
-        print("☰ Menu - Redirection vers compte")
-        self.show_account(instance)
-
-    def show_account(self, instance):
-        """Afficher le compte client"""
-        print("👤 Redirection vers compte complet")
-        if 'client_account' not in self.manager.screen_names:
-            self.manager.add_widget(ClientAccountScreen(name='client_account'))
-        self.manager.current = 'client_account'
-
-    def show_history(self, instance):
-        """Afficher mes courses"""
-        print("📋 Redirection vers mes courses")
-        if 'client_courses' not in self.manager.screen_names:
-            self.manager.add_widget(ClientCoursesScreen(name='client_courses'))
-        self.manager.current = 'client_courses'
-
-    def go_back(self, instance=None):
-        """Retour à l'écran précédent"""
-        if "client_login" in self.manager.screen_names:
-            self.manager.current = "client_login"
-        else:
-            self.manager.current = "selection"
+            # Fallback sur la session
+            print("⚠️ Aucune donnée client dans l'app, vérification session...")
+            self.check_session_fallback()
+    # ========== MÉTHODES ==========
 
     def load_client_adresses(self):
         """Charger les adresses fréquentes du client depuis l'API"""
         global api_client
     
         print("🏠 Chargement des adresses personnelles...")
+    
+        # Vider le conteneur
         self.address_container.clear_widgets()
     
         if api_client is None:
@@ -5713,11 +5275,12 @@ class ClientHomeScreen(Screen):
                 adresses = result.get('adresses', [])
             
                 if not adresses:
-                    self.show_empty_addresses_message()
+                    self.show_default_addresses()
                     return
             
                 print(f"✅ {len(adresses)} adresse(s) personnelle(s) chargée(s)")
             
+                # Afficher chaque adresse
                 for adresse in adresses:
                     self.add_address_button(adresse)
                 
@@ -5729,19 +5292,9 @@ class ClientHomeScreen(Screen):
             print(f"❌ Exception chargement adresses: {e}")
             self.show_default_addresses()
 
-    def show_empty_addresses_message(self):
-        """Afficher un message quand aucune adresse n'est enregistrée"""
-        msg = Label(
-            text="Aucune adresse enregistrée\n\nCliquez sur '+ Ajouter'",
-            size_hint_y=None,
-            height=80,
-            halign='center',
-            color=(0.5, 0.5, 0.5, 1)
-        )
-        self.address_container.add_widget(msg)
-
     def add_address_button(self, adresse):
         """Ajouter un bouton pour une adresse avec menu contextuel"""
+        # Icône selon le type
         icon_map = {
             'personnel': '🏠',
             'travail': '💼', 
@@ -5755,25 +5308,27 @@ class ClientHomeScreen(Screen):
         texte_adresse = adresse.get('adresse', '')
         adresse_id = adresse.get('id')
     
-        if len(texte_adresse) > 25:
-            texte_adresse = texte_adresse[:22] + "..."
+        # Tronquer l'adresse si trop longue
+        if len(texte_adresse) > 30:
+            texte_adresse = texte_adresse[:27] + "..."
     
-        # Layout principal pour l'adresse
+        # Layout principal pour le bouton
         address_widget = BoxLayout(orientation='vertical', 
                                   size_hint=(1, None), 
-                                  height=110)
+                                  height=120)
     
         # Bouton principal
         btn_main = Button(
-            text=f"{icon}\n[size=13]{nom}[/size]\n[size=11]{texte_adresse}[/size]",
+            text=f"{icon}\n[size=14]{nom}[/size]\n[size=12]{texte_adresse}[/size]",
             markup=True,
             halign="center",
             background_color=(0.9, 0.95, 1, 1),
             color=(0, 0, 0, 1),
             size_hint=(1, 0.8)
         )
+    
+        # Stocker les données
         btn_main.adresse_data = adresse
-        btn_main.bind(on_press=lambda instance: self.use_address_for_order(instance.adresse_data))
     
         # Bouton menu (petit)
         btn_menu = Button(
@@ -5782,47 +5337,15 @@ class ClientHomeScreen(Screen):
             font_size='10sp',
             background_color=(0.8, 0.8, 0.8, 1)
         )
+    
+        # Bind
+        btn_main.bind(on_press=lambda instance: self.select_personal_address(instance.adresse_data))
         btn_menu.bind(on_press=lambda instance: self.show_address_menu(adresse))
     
         address_widget.add_widget(btn_main)
         address_widget.add_widget(btn_menu)
     
         self.address_container.add_widget(address_widget)
-
-    def use_address_for_order(self, adresse):
-        """Utiliser une adresse enregistrée pour commander"""
-        print(f"📍 Utilisation adresse: {adresse.get('nom')} - {adresse.get('adresse')}")
-        
-        # Stocker dans l'app pour pré-remplir la carte
-        app = App.get_running_app()
-        
-        if adresse.get('latitude') and adresse.get('longitude'):
-            app.selected_destination = {
-                'text': adresse.get('adresse'),
-                'coordinates': (adresse.get('latitude'), adresse.get('longitude')),
-                'name': adresse.get('nom'),
-                'address_found': True
-            }
-            print(f"✅ Destination pré-sélectionnée: {adresse.get('nom')}")
-        else:
-            # Essayer de géocoder l'adresse
-            coords = self.geocode_address_text(adresse.get('adresse'))
-            if coords:
-                app.selected_destination = {
-                    'text': adresse.get('adresse'),
-                    'coordinates': coords,
-                    'name': adresse.get('nom'),
-                    'address_found': True
-                }
-        
-        # Aller à la carte
-        self.go_to_map_selection(None)
-
-    def geocode_address_text(self, address_text):
-        """Géocoder un texte d'adresse (fallback)"""
-        # Pour l'instant, retourne les coordonnées par défaut de Moroni
-        print(f"🔍 Géocodage: {address_text}")
-        return (-11.6980, 43.2560)
 
     def show_address_menu(self, adresse):
         """Afficher le menu contextuel pour une adresse"""
@@ -5835,36 +5358,37 @@ class ClientHomeScreen(Screen):
     
         lbl_title = Label(text=f"🏠 {adresse.get('nom')}",
                          font_size='18sp',
-                         size_hint=(1, 0.2))
+                         size_hint=(1, 0.3))
     
         lbl_info = Label(text=adresse.get('adresse'),
-                        size_hint=(1, 0.3))
+                        size_hint=(1, 0.4))
     
+        # Boutons
         btn_layout = BoxLayout(spacing=10, size_hint=(1, 0.3))
     
-        btn_use = Button(text='📍 Utiliser')
+        btn_edit = Button(text='✏️ Modifier')
         btn_delete = Button(text='🗑️ Supprimer',
                            background_color=(0.8, 0.2, 0.2, 1))
         btn_cancel = Button(text='Annuler')
     
         popup = Popup(title='Options adresse',
                      content=content,
-                     size_hint=(0.8, 0.45),
+                     size_hint=(0.8, 0.5),
                      auto_dismiss=False)
-    
-        def use_address(instance):
-            popup.dismiss()
-            self.use_address_for_order(adresse)
     
         def delete_address(instance):
             popup.dismiss()
             self.confirm_delete_address(adresse)
     
-        btn_use.bind(on_press=use_address)
-        btn_delete.bind(on_press=delete_address)
-        btn_cancel.bind(on_press=popup.dismiss)
+        def edit_address(instance):
+            popup.dismiss()
+            self.edit_address_popup(adresse)
     
-        btn_layout.add_widget(btn_use)
+        btn_cancel.bind(on_press=popup.dismiss)
+        btn_delete.bind(on_press=delete_address)
+        btn_edit.bind(on_press=edit_address)
+    
+        btn_layout.add_widget(btn_edit)
         btn_layout.add_widget(btn_delete)
         btn_layout.add_widget(btn_cancel)
     
@@ -5890,7 +5414,7 @@ class ClientHomeScreen(Screen):
                    markup=True,
                    halign='center')
     
-        btn_layout = BoxLayout(spacing=10, size_hint=(1, 0.3))
+        btn_layout = BoxLayout(spacing=10, size_hint=(1, 0.4))
     
         btn_cancel = Button(text='Annuler')
         btn_confirm = Button(text='🗑️ Supprimer',
@@ -5898,7 +5422,7 @@ class ClientHomeScreen(Screen):
     
         popup = Popup(title='Confirmer suppression',
                      content=content,
-                     size_hint=(0.8, 0.45),
+                     size_hint=(0.8, 0.5),
                      auto_dismiss=False)
     
         def do_delete(instance):
@@ -5927,48 +5451,61 @@ class ClientHomeScreen(Screen):
         
             if result.get('success'):
                 self.show_info_message(f"✅ Adresse '{adresse.get('nom')}' supprimée")
+                # Recharger les adresses
                 self.load_client_adresses()
             else:
                 self.show_info_message(f"❌ Erreur: {result.get('error')}")
         else:
             self.show_info_message("❌ API non disponible")
 
+    def select_personal_address(self, adresse):
+        """Sélectionner une adresse personnelle"""
+        adresse_text = adresse.get('adresse', '')
+        self.txt_destination.text = adresse_text
+    
+        print(f"📍 Adresse sélectionnée: {adresse.get('nom')} - {adresse_text}")
+    
+        # Si on a des coordonnées GPS, on pourrait les stocker pour la carte
+        if adresse.get('latitude') and adresse.get('longitude'):
+            print(f"📍 Coordonnées: {adresse.get('latitude')}, {adresse.get('longitude')}")
+
     def show_default_addresses(self):
         """Afficher les adresses par défaut (fallback)"""
         print("⚠️ Affichage adresses par défaut (fallback)")
     
+        # Adresses par défaut (les anciennes)
         default_addresses = [
             ("🏠", "Domicile", "Moroni Centre"),
             ("💼", "Travail", "Iconi Business"),
             ("✈️", "Aéroport", "Aéroport Moroni"),
             ("🛒", "Marché", "Marché Volo-volo"),
+            ("🏥", "Hôpital", "Hôpital El-Maarouf"),
+            ("🎓", "Université", "Université Comores"),
         ]
     
         for icon, name, location in default_addresses:
             btn = Button(
-                text=f"{icon}\n[size=13]{name}[/size]\n[size=11]{location}[/size]",
+                text=f"{icon}\n[size=14]{name}[/size]\n[size=12]{location}[/size]",
                 markup=True,
                 halign="center",
                 background_color=(0.9, 0.95, 1, 1),
                 color=(0, 0, 0, 1)
             )
-            # Simuler une adresse
-            fake_adresse = {'nom': name, 'adresse': location}
-            btn.bind(on_press=lambda instance, a=fake_adresse: self.use_address_for_order(a))
+            btn.bind(on_press=lambda instance, loc=location: self.select_address(loc))
             self.address_container.add_widget(btn)
 
     def show_add_address_popup(self, instance):
-        """Afficher un popup pour ajouter une adresse"""
+        """Afficher un popup pour ajouter une adresse - VERSION FINALE"""
         from kivy.uix.popup import Popup
         from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.gridlayout import GridLayout
         from kivy.uix.label import Label
         from kivy.uix.textinput import TextInput
         from kivy.uix.button import Button
-        from kivy.uix.spinner import Spinner
     
-        content = BoxLayout(orientation='vertical', spacing=12, padding=20)
+        content = BoxLayout(orientation='vertical', spacing=15, padding=20)
     
+        # ===== TITRE =====
         lbl_title = Label(
             text='[b]➕ AJOUTER UNE ADRESSE[/b]',
             markup=True,
@@ -5976,31 +5513,87 @@ class ClientHomeScreen(Screen):
             size_hint=(1, 0.12)
         )
     
-        # Nom
+        # ===== NOM =====
+        lbl_nom = Label(
+            text='🏷️ Nom de l\'adresse :',
+            size_hint=(1, 0.08),
+            halign='left'
+        )
+    
         txt_nom = TextInput(
-            hint_text='Nom (ex: Domicile, Travail...)',
+            hint_text='Ex: Domicile, Travail...',
             multiline=False,
             size_hint=(1, 0.12),
-            font_size='15sp'
+            font_size='16sp'
         )
     
-        # Adresse
+        # ===== ADRESSE + BOUTON =====
+        lbl_adresse = Label(
+            text='📍 Adresse :',
+            size_hint=(1, 0.08),
+            halign='left'
+        )
+    
+        address_row = BoxLayout(spacing=10, size_hint=(1, 0.15))
+    
         txt_adresse = TextInput(
-            hint_text='Adresse complète',
+            hint_text='Rue, quartier, ville...',
             multiline=False,
-            size_hint=(1, 0.12),
+            size_hint=(0.75, 1),
             font_size='15sp'
         )
     
-        # Type d'adresse
-        spinner_type = Spinner(
-            text='Personnel',
-            values=('Personnel', 'Travail', 'École', 'Famille', 'Autre'),
-            size_hint=(1, 0.12)
+        btn_locate = Button(
+            text='📍',
+            size_hint=(0.25, 1),
+            font_size='24sp',
+            background_color=(0.2, 0.6, 0.8, 1),
+            color=(1, 1, 1, 1)
         )
     
-        # Boutons
-        btn_layout = BoxLayout(spacing=15, size_hint=(1, 0.15))
+        address_row.add_widget(txt_adresse)
+        address_row.add_widget(btn_locate)
+    
+        # ===== TYPE D'ADRESSE =====
+        lbl_type = Label(
+            text='🏠 Type :',
+            size_hint=(1, 0.08),
+            halign='left'
+        )
+    
+        types_layout = GridLayout(cols=3, spacing=8, size_hint=(1, 0.18))
+    
+        types = [
+            ('🏠', 'personnel', 'Personnel'),
+            ('💼', 'travail', 'Travail'),
+            ('🎓', 'ecole', 'École'),
+        ]
+    
+        selected_type = ['personnel']
+    
+        for icon, value, label in types:
+            btn = Button(
+                text=f"{icon} {label}",
+                font_size='14sp',
+                size_hint=(0.32, 1)
+            )
+        
+            def make_callback(val):
+                def callback(inst):
+                    for child in types_layout.children:
+                        if isinstance(child, Button):
+                            child.background_color = (0.9, 0.9, 0.9, 1)
+                            child.color = (0, 0, 0, 1)
+                    inst.background_color = (0.2, 0.6, 0.2, 1)
+                    inst.color = (1, 1, 1, 1)
+                    selected_type[0] = val
+                return callback
+        
+            btn.bind(on_press=make_callback(value))
+            types_layout.add_widget(btn)
+    
+        # ===== BOUTONS =====
+        btn_layout = BoxLayout(spacing=15, size_hint=(1, 0.12))
     
         btn_cancel = Button(
             text='❌ Annuler',
@@ -6017,26 +5610,93 @@ class ClientHomeScreen(Screen):
         btn_layout.add_widget(btn_cancel)
         btn_layout.add_widget(btn_save)
     
+        # ===== ASSEMBLAGE =====
         content.add_widget(lbl_title)
-        content.add_widget(Label(text='Nom :', size_hint=(1, 0.06), halign='left'))
+        content.add_widget(lbl_nom)
         content.add_widget(txt_nom)
-        content.add_widget(Label(text='Adresse :', size_hint=(1, 0.06), halign='left'))
-        content.add_widget(txt_adresse)
-        content.add_widget(Label(text='Type :', size_hint=(1, 0.06), halign='left'))
-        content.add_widget(spinner_type)
+        content.add_widget(lbl_adresse)
+        content.add_widget(address_row)
+        content.add_widget(lbl_type)
+        content.add_widget(types_layout)
         content.add_widget(btn_layout)
     
+        # ===== POPUP PRINCIPAL =====
         popup = Popup(
             title='📍 Nouvelle adresse',
             content=content,
-            size_hint=(0.9, 0.65),
+            size_hint=(0.9, 0.8),
             auto_dismiss=False
         )
     
-        def save_address(inst):
+        # ===== FONCTION DE LOCALISATION =====
+        def get_current_location(btn_instance):
+            """Afficher les positions prédéfinies"""
+            print("📍 Bouton localisation cliqué !")
+        
+            loc_content = BoxLayout(orientation='vertical', spacing=15, padding=20)
+        
+            lbl_loc_title = Label(
+                text='[b]📍 CHOISIR UNE POSITION[/b]',
+                markup=True,
+                font_size='18sp',
+                size_hint=(1, 0.15)
+            )
+        
+            grid = GridLayout(cols=2, spacing=10, size_hint=(1, 0.7))
+        
+            positions = [
+                ('🏠 Moroni Centre', -11.6980, 43.2560),
+                ('✈️ Aéroport', -11.5330, 43.2670),
+                ('🛒 Volo-Volo', -11.7030, 43.2520),
+                ('🏥 Hôpital', -11.6910, 43.2610),
+            ]
+        
+            for nom, lat, lon in positions:
+                btn = Button(
+                    text=nom,
+                    size_hint=(1, None),
+                    height=70,
+                    background_color=(0.9, 0.95, 1, 1)
+                )
+            
+                def make_loc_callback(adr, la, lo):
+                    def callback(inst):
+                        txt_adresse.text = adr
+                        self.current_lat = la
+                        self.current_lon = lo
+                        loc_popup.dismiss()
+                        self.show_info_message(f"✅ Position: {adr}")
+                    return callback
+            
+                btn.bind(on_press=make_loc_callback(nom, lat, lon))
+                grid.add_widget(btn)
+        
+            btn_loc_cancel = Button(
+                text='❌ Annuler',
+                size_hint=(1, 0.1),
+                background_color=(0.8, 0.2, 0.2, 1)
+            )
+        
+            loc_popup = Popup(
+                title='📍 Sélectionner une position',
+                content=loc_content,
+                size_hint=(0.9, 0.7)
+            )
+        
+            btn_loc_cancel.bind(on_press=loc_popup.dismiss)
+        
+            loc_content.add_widget(lbl_loc_title)
+            loc_content.add_widget(grid)
+            loc_content.add_widget(btn_loc_cancel)
+        
+            loc_popup.open()
+    
+        # ===== BINDINGS =====
+        btn_locate.bind(on_press=get_current_location)  # ← ICI C'EST BON
+    
+        def save_address(instance):
             nom = txt_nom.text.strip()
             adresse = txt_adresse.text.strip()
-            type_addr = spinner_type.text.lower()
         
             if not nom:
                 self.show_info_message("⚠️ Donnez un nom à l'adresse")
@@ -6046,17 +5706,16 @@ class ClientHomeScreen(Screen):
                 self.show_info_message("⚠️ Saisissez une adresse")
                 return
         
+            print(f"➕ Enregistrement: {nom} - {adresse}")
+        
             global api_client
             if api_client:
-                # Coordonnées par défaut (Moroni centre)
-                lat, lon = -11.6980, 43.2560
-                
                 result = api_client.add_client_adresse(
                     nom=nom,
                     adresse=adresse,
-                    latitude=lat,
-                    longitude=lon,
-                    type_adresse=type_addr
+                    latitude=getattr(self, 'current_lat', None),
+                    longitude=getattr(self, 'current_lon', None),
+                    type_adresse=selected_type[0]
                 )
             
                 if result.get('success'):
@@ -6073,50 +5732,413 @@ class ClientHomeScreen(Screen):
     
         popup.open()
 
-    def show_info_message(self, message):
-        """Afficher un message d'information"""
+    def update_location_fields(self, txt_adresse, btn_locate, adresse, lat, lon):
+        """Mettre à jour les champs avec les coordonnées GPS"""
+        txt_adresse.text = adresse
+        txt_adresse.disabled = False
+        btn_locate.text = '📍'
+        btn_locate.disabled = False
+    
+        # Stocker les coordonnées pour l'enregistrement
+        self.current_latitude = lat
+        self.current_longitude = lon
+    
+        print(f"✅ Position obtenue: {lat}, {lon}")
+
+    def reset_location_button(self, txt_adresse, btn_locate):
+        """Réinitialiser le bouton de localisation"""
+        txt_adresse.text = ""
+        txt_adresse.disabled = False
+        btn_locate.text = '📍'
+        btn_locate.disabled = False
+
+    def simulate_location(self, txt_adresse, btn_locate):
+        """Simuler une position (fallback)"""
+        print("📍 Simulation de position...")
+    
+        # Position de test (Moroni)
+        lat = -11.6980
+        lon = 43.2560
+    
+        # Demander à l'utilisateur
         from kivy.uix.popup import Popup
+        from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.label import Label
     
-        popup = Popup(
-            title='Information',
-            content=Label(text=message, halign='center'),
-            size_hint=(0.7, 0.25)
-        )
+        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
+    
+        lbl = Label(text="Voulez-vous utiliser votre position actuelle ?\n\n"
+                        f"📍 {lat:.6f}, {lon:.6f}\n(Moroni Centre)")
+    
+        btn_layout = BoxLayout(spacing=10)
+        btn_yes = Button(text='✅ Oui', background_color=(0.2, 0.6, 0.2, 1))
+        btn_no = Button(text='❌ Non', background_color=(0.8, 0.2, 0.2, 1))
+    
+        popup = Popup(title='📍 Position actuelle',
+                     content=content,
+                     size_hint=(0.8, 0.5))
+    
+        def use_location(instance):
+            adresse = f"Position actuelle ({lat:.6f}, {lon:.6f})"
+            self.update_location_fields(txt_adresse, btn_locate, adresse, lat, lon)
+            popup.dismiss()
+    
+        btn_yes.bind(on_press=use_location)
+        btn_no.bind(on_press=popup.dismiss)
+    
+        btn_layout.add_widget(btn_yes)
+        btn_layout.add_widget(btn_no)
+    
+        content.add_widget(lbl)
+        content.add_widget(btn_layout)
+    
         popup.open()
 
-    def logout(self, instance=None):
+    def go_back(self, instance):
+        """Retour à l'écran précédent"""
+        # Retour à la connexion client ou sélection selon le cas
+        if "client_login" in self.manager.screen_names:
+            self.manager.current = "client_login"
+        else:
+            self.manager.current = "selection"
+
+    def go_home(self, instance):
+        """Recharger l'accueil"""
+        # Pour l'instant, reste sur la même page
+        pass
+
+    def show_account(self, instance):
+        """Afficher le compte client (fusionné avec paramètres)"""
+        print("👤 Redirection vers compte complet")
+        if 'client_account' not in self.manager.screen_names:
+            self.manager.add_widget(ClientAccountScreen(name='client_account'))
+        self.manager.current = 'client_account'
+
+    def show_on_map(self, instance):
+        """Afficher la carte pour sélectionner le trajet"""
+        print("🗺️  Affichage de la carte de sélection")
+    
+        # ⭐⭐ MODIFICATION : Plus besoin d'adresse pour voir la carte !
+        # On peut aller à la carte même sans destination
+    
+        # Option 1 : Si une destination est saisie, la pré-remplir
+        destination = self.txt_destination.text.strip()
+    
+        if destination:
+            print(f"📍 Destination saisie: {destination}")
+        
+            # Essayer de géocoder
+            coordinates = self.geocode_local_address(destination)
+        
+            if coordinates:
+                print(f"✅ Adresse trouvée: {coordinates['nom']}")
+            
+                # Stocker dans l'app pour pré-remplir la carte
+                app = App.get_running_app()
+                app.selected_destination = {
+                    'text': destination,
+                    'coordinates': (coordinates['latitude'], coordinates['longitude']),
+                    'name': coordinates['nom']
+                }
+    
+        # Aller à la carte (avec ou sans destination)
+        self.go_to_map_selection()
+    
+        print("✅ Redirection vers carte de sélection")
+
+    def logout(self, instance):
+        # ✅ AJOUTE AU DÉBUT
+        global api_client, API_MODULE_EXISTS
+
         """Déconnexion client"""
-        global api_client
+        if api_client:
+            api_client.token = None
+            api_client.user_type = None
+
+        # Supprimer la session
+        try:
+            import os
+
+            if os.path.exists("client_session.json"):
+                os.remove("client_session.json")
+        except:
+            pass
+
+        print("✅ Déconnexion réussie")
+        self.manager.current = "selection"
+
+    def select_address(self, address):
+        """Sélectionner une adresse fréquente"""
+        self.txt_destination.text = address
+        print(f"Adresse sélectionnée : {address}")
+
+    def order_ride(self, instance):
+        """Commander une course - VERSION CORRIGÉE (toujours via carte)"""
+        print("\n" + "="*60)
+        print("🎯 ORDER_RIDE - TOUJOURS VIA CARTE")
+        print("="*60)
+
+        destination_text = self.txt_destination.text.strip()
+
+        if destination_text:
+            print(f"🔍 Adresse saisie: '{destination_text}'")
         
-        print("🚪 Déconnexion demandée")
+            # 1. ESSAYER DE GÉOCODER
+            coordinates = self.geocode_local_address(destination_text)
         
+            if coordinates:
+                print(f"✅ Adresse trouvée: {coordinates['nom']}")
+            
+                # ⭐⭐ IMPORTANT : TOUJOURS ALLER À LA CARTE MÊME SI ADRESSE VALIDE
+                print("🗺️  Adresse valide → Redirection vers carte pour confirmation")
+            
+                # Stocker la destination pour pré-remplir la carte
+                app = App.get_running_app()
+                app.selected_destination = {
+                    'text': destination_text,
+                    'coordinates': (coordinates['latitude'], coordinates['longitude']),
+                    'name': coordinates['nom'],
+                    'address_found': True  # Flag important !
+                }
+            
+                # Aller à la carte
+                self.go_to_map_selection()
+            
+            else:
+                # 2. ADRESSE NON TROUVÉE → Aller à la carte vide
+                print(f"❌ Adresse non trouvée → Aller à la carte")
+                self.go_to_map_selection()
+            
+        else:
+            # 3. PAS D'ADRESSE → Aller à la carte
+            print(f"📱 Pas d'adresse saisie → Aller à la carte")
+            self.go_to_map_selection()
+
+    def go_to_order_with_predetermined_destination(self, coordinates, address_text):
+        """Aller directement à OrderRideScreen avec une destination pré-définie"""
+        print(f"🚀 Destination pré-définie: {address_text}")
+        print(f"📍 Coordonnées: {coordinates}")
+    
+        # Coordonnées de départ par défaut (position actuelle simulée)
+        depart_coords = (-11.6980, 43.2560)  # Moroni centre
+    
+        # Créer l'écran OrderRideScreen avec les deux points
+        if 'order_ride' not in self.manager.screen_names:
+            self.manager.add_widget(OrderRideScreen(
+                name='order_ride',
+                depart_coords=depart_coords,
+                arrivee_coords=(coordinates['latitude'], coordinates['longitude']),
+                destination=f"{coordinates['nom']} ({address_text})"
+            ))
+        else:
+            # Mettre à jour l'écran existant
+            existing_screen = self.manager.get_screen('order_ride')
+            existing_screen.depart_coords = depart_coords
+            existing_screen.arrivee_coords = (coordinates['latitude'], coordinates['longitude'])
+            existing_screen.destination = f"{coordinates['nom']} ({address_text})"
+    
+        # Aller à l'écran de commande
+        self.manager.current = 'order_ride'
+        print("✅ Redirection vers OrderRideScreen avec destination pré-définie")        
+
+    def geocode_local_address(self, address):
+        """Chercher l'adresse dans notre base POI locale - VERSION AMÉLIORÉE"""
+        try:
+            import sqlite3
+            import os
+        
+            # Chemin vers la base de données
+            db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'zahel_secure.db')
+        
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+        
+            # NORMALISER la recherche (minuscules, suppression accents)
+            search_term = address.lower().strip()
+        
+            # Recherche AVANCÉE avec plusieurs critères
+            cursor.execute('''
+                SELECT nom, alias, type, latitude, longitude 
+                FROM poi_comores 
+                WHERE LOWER(nom) LIKE ? 
+                   OR LOWER(alias) LIKE ?
+                   OR LOWER(nom) LIKE ?
+                   OR LOWER(alias) LIKE ?
+                ORDER BY 
+                    CASE 
+                        WHEN LOWER(nom) = ? THEN 1
+                        WHEN LOWER(alias) = ? THEN 2
+                        WHEN LOWER(nom) LIKE ? THEN 3
+                        WHEN LOWER(alias) LIKE ? THEN 4
+                        ELSE 5
+                    END
+                LIMIT 3
+            ''', (
+                f'%{search_term}%',  # nom contient
+                f'%{search_term}%',  # alias contient
+                f'{search_term}%',   # nom commence par
+                f'{search_term}%',   # alias commence par
+                search_term,         # nom exact
+                search_term,         # alias exact
+                f'{search_term}%',   # nom commence par (pour tri)
+                f'{search_term}%'    # alias commence par (pour tri)
+            ))
+        
+            results = cursor.fetchall()
+            conn.close()
+        
+            if results:
+                # Prendre le meilleur résultat
+                best_match = results[0]
+                return {
+                    'nom': best_match[0],
+                    'alias': best_match[1],
+                    'type': best_match[2],
+                    'latitude': best_match[3],
+                    'longitude': best_match[4],
+                    'source': 'local'
+                }
+        
+            # Si aucun résultat, essayer avec des termes communs
+            common_terms = {
+                'aéroport': 'Aéroport Prince Said Ibrahim',
+                'hopital': 'Hôpital El-Maarouf', 
+                'hôpital': 'Hôpital El-Maarouf',
+                'marche': 'Marché Volo-volo',
+                'marché': 'Marché Volo-volo',
+                'université': 'Université des Comores',
+                'univ': 'Université des Comores',
+                'port': 'Port de Mutsamudu',
+                'place': 'Place de France',
+                'mosquée': 'Mosquée Vendredi',
+                'mosquee': 'Mosquée Vendredi'
+            }
+        
+            for term, poi_name in common_terms.items():
+                if term in search_term:
+                    # Rechercher ce POI spécifique
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT nom, latitude, longitude FROM poi_comores WHERE nom = ?', (poi_name,))
+                    result = cursor.fetchone()
+                    conn.close()
+                
+                    if result:
+                        return {
+                            'nom': result[0],
+                            'latitude': result[1],
+                            'longitude': result[2],
+                            'source': 'local_fallback'
+                        }
+        
+            return None
+        except Exception as e:
+            print(f"❌ Erreur géocodage local: {e}")
+            return None 
+
+    def show_address_not_found_popup(self, address):
+        """Afficher un popup quand l'adresse n'est pas trouvée"""
+        from kivy.uix.popup import Popup
+        from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.label import Label
+        from kivy.uix.button import Button
+    
+        content = BoxLayout(orientation='vertical', spacing=10, padding=20)
+    
+        message = f"L'adresse '{address}' n'a pas été trouvée.\n\n"
+        message += "Veuillez utiliser la carte pour sélectionner votre destination."
+    
+        content.add_widget(Label(
+            text=message,
+            size_hint=(1, 0.7),
+            halign='center'
+        ))
+    
+        buttons = BoxLayout(spacing=10, size_hint=(1, 0.3))
+    
+        btn_map = Button(text="📍 Utiliser la carte", background_color=(0.2, 0.6, 0.8, 1))
+        btn_map.bind(on_press=lambda x: self.go_to_map_selection())
+    
+        btn_cancel = Button(text="Annuler", background_color=(0.8, 0.2, 0.2, 1))
+    
+        buttons.add_widget(btn_map)
+        buttons.add_widget(btn_cancel)
+    
+        content.add_widget(buttons)
+    
+        popup = Popup(
+            title='Adresse introuvable',
+            content=content,
+            size_hint=(0.8, 0.5),
+            auto_dismiss=False
+        )
+    
+        btn_cancel.bind(on_press=popup.dismiss)
+        popup.open()       
+
+    def go_to_map_with_destination(self, coordinates, address_text):
+        """Aller à la carte avec une destination pré-remplie"""
+        print(f"🗺️  Aller à la carte avec destination: {address_text}")
+        print(f"📍 Coordonnées: {coordinates}")
+    
+        # Stocker la destination pour la carte
+        app = App.get_running_app()
+        app.selected_destination = {
+            'text': address_text,
+            'coordinates': (coordinates['latitude'], coordinates['longitude']),
+            'name': coordinates['nom']
+        }
+    
+        # Aller à la carte
+        if 'map_selection' not in self.manager.screen_names:
+            self.manager.add_widget(MapSelectionScreen(name='map_selection'))
+    
+        self.manager.current = 'map_selection'   
+
+    def show_history(self, instance):
+        """Afficher mes courses (historique + en cours)"""
+        print("📋 Redirection vers mes courses")
+        if 'client_courses' not in self.manager.screen_names:  # ← Changement de nom
+            self.manager.add_widget(ClientCoursesScreen(name='client_courses'))  # ← Changement
+        self.manager.current = 'client_courses'
+
+    def logout(self, instance):
+        # ✅ AJOUTE AU DÉBUT
+        global api_client, API_MODULE_EXISTS
+        """Déconnexion client"""
         if api_client:
             api_client.token = None
             api_client.user_type = None
     
+        # Supprimer la session
         try:
             import os
-            if os.path.exists('session.json'):
-                os.remove('session.json')
+            if os.path.exists('data/client_session.json'):
+                os.remove('data/client_session.json')
                 print("✅ Session supprimée")
         except Exception as e:
-            print(f"⚠️ Erreur suppression session: {e}")
+            print(f"⚠️  Erreur suppression session: {e}")
     
         print("✅ Déconnexion réussie")
         self.manager.current = 'selection'
 
-    def on_enter(self):
-        """Quand on arrive sur l'écran"""
-        print("🏠 ClientHomeScreen activé")
+    def show_info_message(self, message):
+        """Afficher un message d'information (version simplifiée)"""
+        print(f"ℹ️ {message}")
+        # Pour l'instant, juste un print. On peut ajouter un popup plus tard si besoin.    
+
+    def go_to_map_selection(self, instance=None):
+        """Aller à l'écran de sélection sur carte"""
+        print("🗺️  Redirection vers MapSelectionScreen")
     
-        # ⭐ Utiliser un flag pour éviter les appels multiples
-        if not hasattr(self, '_already_loaded'):
-            self._already_loaded = True
-            self.load_profile()
-            self.load_client_adresses()
-        else:
-            print("   (déjà chargé, ignoré)")
+        # Vérifier si l'écran existe déjà
+        if 'map_selection' not in self.manager.screen_names:
+            print("➕ Ajout de MapSelectionScreen...")
+            self.manager.add_widget(MapSelectionScreen(name='map_selection'))
+    
+        # Aller à la carte
+        self.manager.current = 'map_selection'
+        print("✅ Redirection vers carte effectuée")
 
 
 class ClientCoursesScreen(Screen):
@@ -7269,9 +7291,9 @@ class ManageAddressesScreen(Screen):
         popup.open()
 
 
-class MapSelectionScreen_OSM(Screen):  # Ancienne version OSM
+class MapSelectionScreen(Screen):
     def __init__(self, **kwargs):
-        super(MapSelectionScreen_OSM, self).__init__(**kwargs)
+        super(MapSelectionScreen, self).__init__(**kwargs)
         
         self.depart_coords = None
         self.arrivee_coords = None
@@ -7447,7 +7469,7 @@ class MapSelectionScreen_OSM(Screen):  # Ancienne version OSM
             if not check_location_permission():
                 show_permission_warning('location')
 
-        super(MapSelectionScreen_OSM, self).on_enter()
+        super(MapSelectionScreen, self).on_enter()
     
         # Vérifier si une destination a été présélectionnée
         app = App.get_running_app()
@@ -7599,32 +7621,34 @@ class MapSelectionScreen_OSM(Screen):  # Ancienne version OSM
             # Les deux points sont sélectionnés, passer à l'écran de commande
             self.confirm_selection()
     
-        def confirm_selection(self):
-            """Confirmer la sélection et aller à l'écran de commande"""
-            if self.depart_coords and self.arrivee_coords:
-                print(f"✅ Trajet sélectionné:")
-                print(f"   Départ: {self.depart_coords}")
-                print(f"   Arrivée: {self.arrivee_coords}")
+    def confirm_selection(self):
+        """Confirmer la sélection et aller à l'écran de commande"""
+        if self.depart_coords and self.arrivee_coords:
+            print(f"✅ Trajet sélectionné:")
+            print(f"   Départ: {self.depart_coords}")
+            print(f"   Arrivée: {self.arrivee_coords}")
         
-                # ⭐⭐⭐ TOUJOURS CRÉER UN NOUVEL ÉCRAN ⭐⭐⭐
-                if 'order_ride' in self.manager.screen_names:
-                    self.manager.remove_widget(self.manager.get_screen('order_ride'))
-                    print("🗑️ Ancien OrderRideScreen supprimé")
-
-                # Créer le nouvel écran
-                order_screen = OrderRideScreen(
+            if 'order_ride' not in self.manager.screen_names:
+                self.manager.add_widget(OrderRideScreen(
                     name='order_ride',
                     depart_coords=self.depart_coords,
                     arrivee_coords=self.arrivee_coords,
                     destination="Destination sélectionnée"
-                )
-                self.manager.add_widget(order_screen)
-            
-                print(f"🔄 Nouvel OrderRideScreen créé")
-        
-                self.manager.current = 'order_ride'
+                ))
             else:
-                print("❌ Sélection incomplète")
+                order_screen = self.manager.get_screen('order_ride')
+                order_screen.depart_coords = self.depart_coords
+                order_screen.arrivee_coords = self.arrivee_coords
+            
+                # ⭐ FORCER LE RECALCUL EN RÉINITIALISANT LE FLAG
+                order_screen.prices_updated = False
+            
+                # ⭐ AFFICHER UN MESSAGE DE DEBUG
+                print(f"🔄 Ordre donné à OrderRideScreen de se mettre à jour")
+        
+            self.manager.current = 'order_ride'
+        else:
+            print("❌ Sélection incomplète")
     
     def use_my_location(self, instance):
         """Utiliser la position actuelle (simulée pour l'instant)"""
@@ -7689,59 +7713,23 @@ class MapSelectionScreen_OSM(Screen):  # Ancienne version OSM
         self.manager.current = 'client_home'
     
     def on_leave(self):
-        """Nettoyage COMPLET à la sortie"""
-        print("🧹 MapSelectionScreen.on_leave - Nettoyage COMPLET")
-    
-        # 1. Réinitialiser les coordonnées locales
+        """Nettoyage à la sortie"""
+        # Réinitialiser pour la prochaine utilisation
         self.depart_coords = None
         self.arrivee_coords = None
         self.mode_selection = "depart"
-    
-        # 2. Nettoyer les marqueurs
-        if hasattr(self, 'depart_marker') and self.depart_marker:
-            try:
-                self.map_view.remove_marker(self.depart_marker)
-            except:
-                pass
-            self.depart_marker = None
-    
-        if hasattr(self, 'arrivee_marker') and self.arrivee_marker:
-            try:
-                self.map_view.remove_marker(self.arrivee_marker)
-            except:
-                pass
-            self.arrivee_marker = None
-    
-        if hasattr(self, 'destination_markers'):
-            for marker in self.destination_markers:
-                try:
-                    self.map_view.remove_marker(marker)
-                except:
-                    pass
-            self.destination_markers = []
-    
-        # 3. Réinitialiser l'interface
+        
+        # Réinitialiser l'interface
         self.lbl_title.text = '[b]📍 Sélectionnez votre point de départ[/b]'
         self.lbl_instructions.text = '[size=16][color=2E7D32]Appuyez sur la carte pour choisir le point de départ[/color][/size]'
         self.btn_next.text = '[size=16]📌 Valider départ[/size]'
         self.btn_next.disabled = True
         self.lbl_coords.text = 'Latitude: --, Longitude: --'
-    
-        # 4. Réinitialiser les étapes visuelles
+        
+        # Réinitialiser les étapes visuelles
         self.step_depart.color = (0.2, 0.5, 0.8, 1)
         self.step_arrivee.color = (0.5, 0.5, 0.5, 1)
-        self.step_arrivee.text = '[size=14]2. Destination[/size]'
         self.step_confirm.color = (0.5, 0.5, 0.5, 1)
-    
-        # 5. ⭐⭐⭐ CRITIQUE : Nettoyer les données globales de l'app ⭐⭐⭐
-        app = App.get_running_app()
-        if hasattr(app, 'selected_destination'):
-            delattr(app, 'selected_destination')
-            print("   🗑️ app.selected_destination supprimé")
-    
-        if hasattr(app, 'current_course_coords'):
-            delattr(app, 'current_course_coords')
-            print("   🗑️ app.current_course_coords supprimé")
 
     def center_on_destination(self, coordinates):
         """Centrer la carte sur les coordonnées données"""
@@ -7794,10 +7782,6 @@ class OrderRideScreen(Screen):
         self.arrivee_coords = arrivee_coords or (-11.7100, 43.2650)
         self.destination = destination
 
-        # ⭐ Vérifier que les coordonnées sont valides avant de les utiliser
-        if self.depart_coords is None or self.arrivee_coords is None:
-            print("⚠️ OrderRideScreen initialisé SANS coordonnées")
-
         # ⭐ FLAG POUR SAVOIR SI LES PRIX SONT À JOUR
         self.prices_updated = False
 
@@ -7815,16 +7799,6 @@ class OrderRideScreen(Screen):
             padding=[20, 20, 20, 30],
             size_hint_y=None,
         )
-        # Ajouter un fond clair (BoxLayout n'a pas background_color)
-        with main_layout.canvas.before:
-            Color(0.9, 0.9, 0.9, 1)
-            self._order_bg = Rectangle(pos=main_layout.pos, size=main_layout.size)
-
-        def _update_bg(instance, value):
-            self._order_bg.pos = instance.pos
-            self._order_bg.size = instance.size
-
-        main_layout.bind(pos=_update_bg, size=_update_bg)
         main_layout.bind(minimum_height=main_layout.setter("height"))
 
         # ========== EN-TÊTE ==========
@@ -7983,15 +7957,6 @@ class OrderRideScreen(Screen):
             size_hint=(1, 0.3),
         )
 
-        # Bouton pour voir le détail
-        btn_detail = Button(
-            text="ℹ️",
-            size_hint=(0.15, 0.3),
-            background_color=(0.3, 0.5, 0.7, 1),
-            pos_hint={"right": 0.95}
-        )
-        btn_detail.bind(on_press=lambda x: self.show_price_breakdown(self.selected_service))
-
         # ⭐ UTILISER LA MÊME DISTANCE
         calculated_price = self.calculate_price_from_distance()
 
@@ -8012,7 +7977,6 @@ class OrderRideScreen(Screen):
         price_box.add_widget(lbl_price)
         price_box.add_widget(self.lbl_calculated_price)
         price_box.add_widget(lbl_price_info)
-        price_box.add_widget(btn_detail)
 
         self.price = calculated_price
 
@@ -8135,95 +8099,21 @@ class OrderRideScreen(Screen):
         print(f"✅ {len(self.services)} boutons recréés avec nouveaux prix")
 
     def calculate_service_price(self, service_id, distance_km):
-        """Calculer le prix avec facteurs environnementaux (Mapbox Weather)"""
-        try:
-            from environmental_pricing import EnvironmentalPricing
+        tarifs_base = {'standard': 500, 'confort': 600, 'luxe': 750, 'moto': 300}
+        tarifs_km = {'standard': 300, 'confort': 360, 'luxe': 450, 'moto': 180}
         
-            # Coordonnées du départ pour la météo
-            lat = self.depart_coords[0] if self.depart_coords else None
-            lng = self.depart_coords[1] if self.depart_coords else None
-        
-            # Calcul avec facteurs environnementaux
-            price = EnvironmentalPricing.calculate_price(
-                distance_km, 
-                service_id, 
-                lat, 
-                lng
-            )
-            return price
-        
-        except ImportError as e:
-            print(f"⚠️ Module environmental_pricing non disponible: {e}")
-            # Fallback sur les anciens tarifs (maintenant baissés aussi)
-            tarifs_base = {'standard': 400, 'confort': 500, 'luxe': 600, 'moto': 250}
-            tarifs_km = {'standard': 250, 'confort': 300, 'luxe': 400, 'moto': 150}
-        
-            if service_id in tarifs_base:
-                base = tarifs_base[service_id]
-                tarif_km = tarifs_km[service_id]
-                price = base + (distance_km * tarif_km)
-                return ((price + 99) // 100) * 100
-            return 0
+        if service_id in tarifs_base:
+            base = tarifs_base[service_id]
+            tarif_km = tarifs_km[service_id]
+            price = base + (distance_km * tarif_km)
+            return ((price + 99) // 100) * 100
+        return 0
 
     def calculate_price_from_distance(self):
         """Calculer le prix basé sur la distance réelle"""
         distance_km = self.calculate_real_distance()
         categorie = getattr(self, 'selected_service', 'standard')
         return self.calculate_service_price(categorie, distance_km)
-
-    def show_price_breakdown(self, service_id):
-        """Afficher le détail du prix dans un popup"""
-        try:
-            from environmental_pricing import EnvironmentalPricing
-        
-            distance = self.calculate_real_distance()
-            lat = self.depart_coords[0] if self.depart_coords else None
-            lng = self.depart_coords[1] if self.depart_coords else None
-        
-            breakdown = EnvironmentalPricing.get_price_breakdown(
-                distance, 
-                service_id, 
-                lat, 
-                lng
-            )
-        
-            # Message formaté
-            message = f"""
-    💰 DÉTAIL DU PRIX
-    ━━━━━━━━━━━━━━━━━━━━━
-    🚗 Tarif de base : {breakdown['base_price']} KMF
-    📏 Distance ({breakdown['distance_km']:.1f} km) : {breakdown['distance_cost']} KMF
-    ━━━━━━━━━━━━━━━━━━━━━
-    📊 Sous-total : {breakdown['base_total']} KMF
-
-    ⏰ {breakdown['time_label']} : +{breakdown['time_surcharge']} KMF
-    🌤️ {breakdown['weather_label']} : +{breakdown['weather_surcharge']} KMF
-━    ━━━━━━━━━━━━━━━━━━━━
-    💵 TOTAL : {breakdown['final_price']} KMF
-            """
-        
-            self.show_info_popup("Détail du prix", message)
-        
-        except Exception as e:
-            print(f"⚠️ Erreur affichage détail: {e}")
-            self.show_info_popup("Information", "Détail du prix non disponible")
-
-    def show_info_popup(self, title, message):
-        """Afficher un popup d'information"""
-        from kivy.uix.popup import Popup
-        from kivy.uix.label import Label
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.button import Button
-    
-        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        content.add_widget(Label(text=message, halign='center', font_size='14sp'))
-    
-        btn_ok = Button(text='OK', size_hint_y=None, height=50)
-        popup = Popup(title=title, content=content, size_hint=(0.8, 0.6))
-        btn_ok.bind(on_press=popup.dismiss)
-        content.add_widget(btn_ok)
-    
-        popup.open()
 
     def go_back(self, instance):
         """Retour à l'écran précédent"""
@@ -8432,38 +8322,6 @@ class OrderRideScreen(Screen):
         print(f"💰 Calcul prix {categorie}: {base} + ({distance_km}km × {tarif_km}) = {price} KMF")
         return int(price)
 
-    def on_leave(self):
-        """Nettoyer quand on quitte l'écran de commande"""
-        print("🧹 OrderRideScreen.on_leave - Nettoyage")
-    
-        # Réinitialiser les coordonnées
-        self.depart_coords = None
-        self.arrivee_coords = None
-        self.prices_updated = False
-        self.selected_service = "standard"
-    
-        # Réinitialiser l'affichage du prix
-        if hasattr(self, 'lbl_calculated_price'):
-            self.lbl_calculated_price.text = "[size=28][b]0 KMF[/b][/size]"
-
-    def reset(self, depart_coords, arrivee_coords, destination=""):
-        """Reinitialiser completement l'ecran avec de nouvelles coordonnees"""
-        print("🔄 OrderRideScreen.reset() appelé")
-        
-        self.depart_coords = depart_coords
-        self.arrivee_coords = arrivee_coords
-        self.destination = destination
-        self.prices_updated = False
-        self.selected_service = "standard"
-        
-        # Forcer la mise a jour
-        if hasattr(self, 'txt_to'):
-            dest_text = destination[:30] + "..." if len(destination) > 30 else destination
-            self.txt_to.text = dest_text
-        
-        # Recalculer les prix
-        Clock.schedule_once(lambda dt: self.on_pre_enter(), 0.1)
-
 
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Ellipse
@@ -8572,11 +8430,6 @@ class WaitingForDriverScreen(Screen):
         course_code = kwargs.pop('course_code', None)
         
         super(WaitingForDriverScreen, self).__init__(**kwargs)
-
-        # ✅ AJOUTER CETTE LIGNE
-        from kivy.app import App
-        app = App.get_running_app()
-        self.api_client = getattr(app, 'api_client', None)
         
         # Stocker les données
         self.depart_coords = depart_coords
@@ -8586,7 +8439,6 @@ class WaitingForDriverScreen(Screen):
         self.price = price
         self.course_code = course_code
         self.check_timer = None
-        self._last_no_course_log = 0
         
         # Layout principal
         main_layout = BoxLayout(orientation="vertical", spacing=10, padding=[20, 10, 20, 20])
@@ -8725,16 +8577,6 @@ class WaitingForDriverScreen(Screen):
         import time 
         self._last_no_course_log = 0
 
-    def get_api_client(self):
-        """Récupérer l'API client depuis l'application"""
-        if not self.api_client:
-            from kivy.app import App
-            app = App.get_running_app()
-            self.api_client = getattr(app, 'api_client', None)
-            if self.api_client:
-                print("✅ API client récupéré")
-        return self.api_client
-
     def get_service_name(self, service):
         """Retourne le nom traduit du service"""
         names = {
@@ -8760,38 +8602,34 @@ class WaitingForDriverScreen(Screen):
         Clock.schedule_once(self.check_course_status, 0.5)
     
     def check_course_status(self, dt):
-        """Appeler l'API pour voir le statut"""
-        # ✅ Récupérer l'API client
-        api_client = self.get_api_client()
-        
-        if not api_client:
-            print("⚠️ API client non disponible")
+        """Appeler l'API pour voir le statut - VERSION SILENCIEUSE"""
+    
+        # ✅ VÉRIFICATION : Ne rien faire si plus sur cet écran
+        if not hasattr(self, 'manager') or self.manager.current != 'waiting_for_driver':
+            return
+    
+        if not self.course_code:
+            # ⭐ LOG RÉDUIT : une fois toutes les 30 secondes
+            if hasattr(self, '_last_no_course_log') and time.time() - self._last_no_course_log > 30:
+                print("ℹ️ En attente d'attribution de course...")
+                self._last_no_course_log = time.time()
+            elif not hasattr(self, '_last_no_course_log'):
+                self._last_no_course_log = time.time()
             return
         
-        if not self.course_code:
+        global api_client
+        
+        if not api_client or not api_client.token:
+            print("⚠️ API non disponible")
             return
         
         try:
-            print(f"🔍 Vérification statut course {self.course_code}")
+            # 1. Vérifier le statut de la course
             result = api_client.get_course_status(self.course_code)
             
             if result and result.get('success'):
                 course_data = result.get('course', {})
                 statut = course_data.get('statut', '')
-                print(f"📊 Statut course: {statut}")
-                         
-                # ⭐⭐⭐ NOUVEAU : DÉTECTER LES ANNULATIONS ⭐⭐⭐
-                if statut == 'annulee':
-                    annule_par = course_data.get('annule_par', 'inconnu')
-                    self.stop_checking()
-                
-                    if annule_par == 'conducteur':
-                        message = "Le conducteur a annulé la course.\n\nRecherchez une autre course."
-                    else:
-                        message = "Course annulée.\n\nRetour à l'accueil..."
-                
-                    self.show_cancelled_popup(message)
-                    return
                 
                 # SI CONDUCTEUR TROUVÉ
                 if statut in ['acceptee', 'en_cours']:
@@ -8809,32 +8647,26 @@ class WaitingForDriverScreen(Screen):
                             'price': self.price,
                             'plaque': conducteur.get('immatricule', 'ZH-XXXXXX'),
                             'eta': '~4 min',
-                            'couleur': conducteur.get('couleur_vehicule', ''),
-                            'telephone': conducteur.get('telephone', '')
+                            'color': conducteur.get('couleur_vehicule', '')
                         }
                         
                         # Aller à l'écran de suivi
                         self.go_to_tracking(driver_info)
                         return
-            else:
-                print(f"⚠️ Réponse API: {result}")
             
-            # Mettre à jour les statistiques des conducteurs
+            # 2. Récupérer les stats conducteurs (même si pas de conducteur attribué)
             self.update_driver_stats()
             
         except Exception as e:
             print(f"❌ Erreur vérification: {e}")
-            import traceback
-            traceback.print_exc()
     
     def update_driver_stats(self):
         """Mettre à jour les statistiques des conducteurs"""
-        api_client = self.get_api_client()
-        
-        if not api_client or not hasattr(api_client, 'get_driver_stats'):
-            return
+        global api_client
         
         try:
+            # Appel API pour compter les conducteurs
+            # À adapter selon ton API réelle
             result = api_client.get_driver_stats(
                 lat=self.depart_coords[0],
                 lng=self.depart_coords[1],
@@ -8842,28 +8674,30 @@ class WaitingForDriverScreen(Screen):
                 category=self.service
             )
             
-            if result.get('success'):
+            if result and result.get('success'):
                 stats = result.get('stats', {})
-                total_online = stats.get('total_online', 0)
-                nearby = stats.get('nearby', 0)
-                category_count = stats.get(f'category_{self.service}', 0)
                 
-                self.lbl_online.text = f"• {total_online} conducteurs en ligne"
-                self.lbl_nearby.text = f"• {nearby} disponibles autour"
-                self.lbl_category.text = f"• {category_count} véhicules {self.service.upper()}"
+                # Mettre à jour les labels
+                self.lbl_online.text = f"• {stats.get('total_online', 0)} conducteurs en ligne"
+                self.lbl_nearby.text = f"• {stats.get('nearby', 0)} disponibles autour de vous"
                 
-                # Changer la couleur des points selon disponibilité
-                if category_count > 0:
+                # Changer la couleur des points selon les stats
+                if stats.get('nearby', 0) > 0:
                     self.points_widget.set_color_mode('found')
                 else:
                     self.points_widget.set_color_mode('searching')
+                
+                # Mettre à jour le compteur par catégorie
+                category_count = stats.get(f'category_{self.service}', 0)
+                self.lbl_category.text = f"• {category_count} véhicule {self.service.upper()}"
+                
         except Exception as e:
             print(f"⚠️ Erreur mise à jour stats: {e}")
     
     def go_to_tracking(self, driver_info):
-        """Aller à l'écran de suivi avec Mapbox"""
+        """Aller à l'écran de suivi"""
         print(f"🚗 Redirection vers suivi avec conducteur: {driver_info['nom']}")
-
+    
         # ✅ S'ASSURER QUE LE DICTIONNAIRE A LES BONNES CLÉS
         normalized_driver = {
             'nom': driver_info.get('nom', driver_info.get('name', 'Conducteur')),
@@ -8876,33 +8710,22 @@ class WaitingForDriverScreen(Screen):
             'telephone': driver_info.get('telephone', driver_info.get('phone', '')),
             'eta': driver_info.get('eta', '~4 min')
         }
-
-        # ⭐⭐⭐ UTILISER DriverTrackingScreenMapbox (avec Mapbox) ⭐⭐⭐
+    
         if 'driver_tracking' not in self.manager.screen_names:
-            # Importer DriverTrackingScreenMapbox
-            from tracking_mapbox import DriverTrackingScreenMapbox
-        
-            tracking_screen = DriverTrackingScreenMapbox(
+            self.manager.add_widget(DriverTrackingScreen(
                 name='driver_tracking',
                 driver=normalized_driver,
                 destination=self.destination,
                 price=self.price,
-                course_code=self.course_code,
-                depart_coords=self.depart_coords,      # ⭐ PASSER LES COORDONNÉES
-                arrivee_coords=self.arrivee_coords     # ⭐ PASSER LES COORDONNÉES
-            )
-            self.manager.add_widget(tracking_screen)
-            print("✅ DriverTrackingScreenMapbox créé avec coordonnées")
+                course_code=self.course_code
+            ))
         else:
             tracking_screen = self.manager.get_screen('driver_tracking')
             tracking_screen.driver = normalized_driver
             tracking_screen.destination = self.destination
             tracking_screen.price = self.price
             tracking_screen.course_code = self.course_code
-            tracking_screen.depart_coords = self.depart_coords        # ⭐ METTRE À JOUR
-            tracking_screen.destination_coords = self.arrivee_coords  # ⭐ METTRE À JOUR
-            print("✅ DriverTrackingScreenMapbox mis à jour avec coordonnées")
-
+    
         self.manager.current = 'driver_tracking'
     
     def cancel_search(self, instance):
@@ -8938,37 +8761,6 @@ class WaitingForDriverScreen(Screen):
     def on_leave(self):
         """Nettoyage en quittant"""
         self.stop_checking()
-
-    def show_cancelled_popup(self, message):
-        """Afficher un popup quand la course est annulée"""
-        from kivy.uix.popup import Popup
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.label import Label
-        from kivy.uix.button import Button
-        
-        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
-        content.add_widget(Label(
-            text=f"[size=18]❌ Course annulée[/size]\n\n{message}",
-            markup=True,
-            halign='center'
-        ))
-        
-        btn = Button(text='OK', size_hint_y=None, height=50, background_color=(0.2, 0.6, 0.2, 1))
-        
-        popup = Popup(
-            title='Annulation',
-            content=content,
-            size_hint=(0.8, 0.35),
-            auto_dismiss=False
-        )
-        
-        def go_home(instance):
-            popup.dismiss()
-            self.manager.current = 'client_home'
-        
-        btn.bind(on_press=go_home)
-        content.add_widget(btn)
-        popup.open()
 
 
 class DriverTrackingScreen(Screen):
@@ -9762,57 +9554,53 @@ class ZAHELApp(App):
         print(f"🚀 LANCEMENT ZAHEL - MODE {'CONDUCTEUR' if IS_DRIVER_MODE else 'CLIENT'}")
         print(f"{'='*60}\n")
 
-        # Charger la langue
+        # ⭐ CHARGER LA LANGUE SAUVEGARDÉE
         self.load_language_preference()
 
-        # Permissions Android
+        # ✅ CORRECTION : Importer Clock ICI si nécessaire
+        from kivy.clock import Clock
+
+        # ✅ AJOUTER CETTE LIGNE : Demander les permissions Android
         Clock.schedule_once(lambda dt: request_android_permissions(), 0)
+
+        # ✅ AJOUTER CETTE VÉRIFICATION APRÈS 2 SECONDES
         Clock.schedule_once(lambda dt: self.handle_missing_permissions(), 2)
 
         # Créer le ScreenManager
         self.sm = ScreenManager()
 
-        # Ajouter l'écran de langue
+        # Ajouter l'écran de langue EN PREMIER
         self.sm.add_widget(LanguageSelectionScreen(name="language_selection"))
 
+        # ✅ LOGIQUE MODIFIÉE : CRÉER LES ÉCRANS SELON LE MODE
+    
         if IS_DRIVER_MODE:
-            # MODE CONDUCTEUR
+            # MODE CONDUCTEUR SEULEMENT
             print("🎯 Configuration pour MODE CONDUCTEUR")
-            
+        
+            # Écrans conducteur uniquement
             self.sm.add_widget(LoginScreen(name="driver_login"))
             self.sm.add_widget(DriverRegisterScreen(name="driver_register")) 
             self.sm.add_widget(DashboardScreen(name="dashboard"))
             self.sm.add_widget(CoursesScreen(name="courses"))
             self.sm.add_widget(AmendesScreen(name='amendes'))
-            
-            # Navigation avec Mapbox si disponible
-            if MAPBOX_NAV_AVAILABLE:
-                self.sm.add_widget(NavigationScreenMapbox(name="navigation"))
-                print("✅ Navigation Mapbox ajoutée")
-            else:
-                self.sm.add_widget(NavigationScreen(name="navigation"))
-                print("⚠️ Navigation OSM utilisée (fallback)")
-            
+            self.sm.add_widget(NavigationScreen(name="navigation"))
+        
+            # Écran par défaut
             self.sm.current = "driver_login"
         
         else:
-            # MODE CLIENT
+            # MODE CLIENT (par défaut)
             print("🎯 Configuration pour MODE CLIENT")
-    
-            # Écran de sélection
+        
+            # Tous les écrans
             self.sm.add_widget(SelectionScreen(name="selection"))
-    
+        
             # Écrans client
             self.sm.add_widget(ClientLoginScreen(name="client_login"))
             self.sm.add_widget(ClientRegisterScreen(name="client_register"))
             self.sm.add_widget(ClientHomeScreen(name="client_home"))
-
-            # ⭐⭐⭐ MAPSELECTIONSCREEN - UNE SEULE FOIS AVEC MAPBOX WEBVIEW ⭐⭐⭐
-            from map_selection_screen import MapSelectionScreen as MapboxSelectionScreen
-            self.sm.add_widget(MapboxSelectionScreen(name='map_selection'))
-            print("✅ MapSelectionScreen (Mapbox) ajoutée")
-    
-            # Écran de commande
+            self.sm.add_widget(MapSelectionScreen(name='map_selection'))
             self.sm.add_widget(OrderRideScreen(
                 name='order_ride',
                 depart_coords=(-11.6980, 43.2560),
@@ -9820,46 +9608,32 @@ class ZAHELApp(App):
                 destination=""
             ))
             self.sm.add_widget(WaitingForDriverScreen(name="waiting_for_driver"))
-    
-            # Suivi client avec Mapbox
-            if MAPBOX_TRACKING_AVAILABLE:
-                self.sm.add_widget(DriverTrackingScreenMapbox(name="driver_tracking"))
-                print("✅ DriverTrackingScreenMapbox ajouté")
-            else:
-                self.sm.add_widget(DriverTrackingScreen(name="driver_tracking"))
-                print("⚠️ DriverTrackingScreen OSM utilisé (fallback)")
-    
-            # Écrans conducteur (accessibles)
+            
+            self.sm.add_widget(DriverTrackingScreen(name="driver_tracking"))
+        
+            # Écrans conducteur (accessibles via sélection)
             self.sm.add_widget(LoginScreen(name="driver_login"))
             self.sm.add_widget(DriverRegisterScreen(name="driver_register")) 
             self.sm.add_widget(DashboardScreen(name="dashboard"))
             self.sm.add_widget(CoursesScreen(name="courses"))
             self.sm.add_widget(AmendesScreen(name='amendes'))
-    
-            # Navigation conducteur avec Mapbox
-            if MAPBOX_NAV_AVAILABLE:
-                self.sm.add_widget(NavigationScreenMapbox(name="navigation"))
-                print("✅ Navigation Mapbox ajoutée")
-            else:
-                self.sm.add_widget(NavigationScreen(name="navigation"))
-                print("⚠️ Navigation OSM utilisée (fallback)")
-    
+            self.sm.add_widget(NavigationScreen(name="navigation"))
+        
+            # Écran par défaut
             self.sm.current = "selection"
 
-        # Restaurer la session
+        # RESTAURER LA SESSION APRÈS avoir créé tous les écrans
         if self.restore_session():
+            # Si session restaurée, aller à l'écran approprié
+            from kivy.clock import Clock
             Clock.schedule_once(self.go_to_appropriate_screen, 0.5)
 
-        # Test API
+        # ✅ AJOUTER CE TEST AU DÉMARRAGE
         self.test_api_connection_at_startup()
 
-        # Configurer les intents Android
+        # ⭐ NOUVEAU : Configurer les intents Android
         if platform == 'android':
             Clock.schedule_once(self.setup_intent_listener, 1)
-
-        # ✅ Ajouter api_client à l'application
-        self.api_client = api_client
-        print(f"🔍 ZAHELApp.api_client = {self.api_client}")
 
         return self.sm
 
@@ -9993,35 +9767,6 @@ class ZAHELApp(App):
     def go_to_order_with_location(self, lat, lng):
         """Redirige vers l'écran de commande avec les coordonnées reçues"""
         print(f"🚀 Redirection vers commande avec localisation: {lat}, {lng}")
-
-        # ⭐ VÉRIFICATION CRITIQUE ⭐
-        if not self.depart_coords or not self.arrivee_coords:
-            print("❌ Erreur: Coordonnées manquantes")
-            self.show_error_popup("Veuillez sélectionner un départ et une arrivée")
-            return
-    
-        print(f"🚕 Redirection vers écran de commande")
-        print(f"   Départ: {self.depart_coords}")
-        print(f"   Arrivée: {self.arrivee_coords}")
-    
-        # Créer un NOUVEL écran à chaque fois (ne pas réutiliser l'ancien)
-        from main import OrderRideScreen
-    
-        # ⭐⭐⭐ SUPPRIMER l'ancien écran s'il existe ⭐⭐⭐
-        if 'order_ride' in self.manager.screen_names:
-            self.manager.remove_widget(self.manager.get_screen('order_ride'))
-            print("🗑️ Ancien OrderRideScreen supprimé")
-    
-        # Créer un NOUVEL écran avec les coordonnées actuelles
-        order_screen = OrderRideScreen(
-            name='order_ride',
-            depart_coords=self.depart_coords,
-            arrivee_coords=self.arrivee_coords,
-            destination="Destination sélectionnée"
-        )
-        self.manager.add_widget(order_screen)
-    
-        self.manager.current = 'order_ride'
         
         # Vérifier que l'utilisateur est connecté
         if not hasattr(self, 'client_data') or not self.client_data:
@@ -10168,15 +9913,12 @@ class ZAHELApp(App):
                 # ✅ 5. CONFIGURER SELON LE TYPE
                 if user_type == 'client':
                     print("✅ Session client valide")
-
-                    nom = session_data.get('nom', 'Client') 
             
                     # Stocker dans app.client_data
                     self.client_data = {
                         'token': token,
                         'telephone': identifier,
                         'user_type': user_type,
-                        'nom': nom,
                         'timestamp': session_data['timestamp']
                     }
             

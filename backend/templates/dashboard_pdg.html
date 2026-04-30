@@ -3,2269 +3,1019 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZAHEL - Dashboard PDG Confidentiel</title>
+    <title>ZAHEL - PANEL PDG PRODUCTION</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    
+    <!-- Bibliothèques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        /* RESET ET BASE */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Inter', system-ui, sans-serif; }
+        
+        :root {
+            --primary: #2563eb; --primary-dark: #1e40af; --success: #10b981; --warning: #f59e0b;
+            --danger: #ef4444; --info: #06b6d4; --dark: #0f172a; --darker: #020617;
+            --light: #f8fafc; --gray: #64748b; --border: rgba(255,255,255,0.1);
+            --card-bg: rgba(255,255,255,0.03); --sidebar-width: 300px; --header-height: 70px;
+            --gold: #fbbf24; --purple: #a855f7; --cyan: #06b6d4; --pink: #ec4899;
         }
         
-        body {
-            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-            line-height: 1.6;
-        }
+        body { background: linear-gradient(135deg, var(--darker) 0%, #1a1a3e 50%, var(--dark) 100%); min-height: 100vh; color: white; }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        /* LOGIN */
+        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at 30% 50%, rgba(37,99,235,0.15) 0%, transparent 70%); }
+        .login-card { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border-radius: 32px; padding: 48px 40px; width: 100%; max-width: 440px; border: 1px solid rgba(37, 99, 235, 0.3); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); }
+        .login-logo { text-align: center; margin-bottom: 40px; }
+        .login-logo h1 { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #2563eb, #06b6d4, #10b981); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .login-logo .badge { display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); padding: 6px 20px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; margin-top: 12px; }
+        .login-form .input-group { margin-bottom: 24px; }
+        .login-form label { display: block; margin-bottom: 8px; font-weight: 500; color: #94a3b8; }
+        .login-form input { width: 100%; padding: 16px 18px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 16px; color: white; font-size: 1rem; }
+        .login-form input:focus { outline: none; border-color: var(--primary); background: rgba(37,99,235,0.1); }
+        .login-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; border-radius: 16px; color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(37,99,235,0.4); }
+        .error-message { color: var(--danger); text-align: center; margin-top: 16px; display: none; }
+        .error-message.show { display: block; }
         
-        /* HEADER */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 30px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(52, 152, 219, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
+        /* DASHBOARD LAYOUT */
+        .dashboard { display: none; min-height: 100vh; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #2563eb, #06b6d4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .sidebar-header .pdg-badge { display: inline-block; background: var(--danger); padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; margin-top: 8px; }
+        .sidebar-nav { flex: 1; padding: 20px 12px; }
+        .nav-section { margin-bottom: 24px; }
+        .nav-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gray); padding: 0 12px; margin-bottom: 12px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: #94a3b8; cursor: pointer; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item i { width: 24px; font-size: 1.2rem; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: var(--primary); color: white; }
+        .nav-item .badge-count { margin-left: auto; background: var(--danger); padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; }
+        .sidebar-footer { padding: 20px; border-top: 1px solid var(--border); }
         
-        .title {
-            font-size: 2.8rem;
-            background: linear-gradient(90deg, #3498db, #2ecc71);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 15px;
-        }
+        /* MAIN CONTENT */
+        .main-content { margin-left: var(--sidebar-width); min-height: 100vh; }
+        .main-header { height: var(--header-height); padding: 0 30px; display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+        .header-title { font-size: 1.5rem; font-weight: 600; }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .real-time-badge { display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.15); padding: 8px 16px; border-radius: 50px; }
+        .real-time-badge .pulse { width: 10px; height: 10px; background: var(--success); border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+        .time-display { font-family: monospace; font-size: 1.2rem; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 12px; }
+        .period-selector { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 12px; }
+        .period-btn { padding: 8px 16px; background: transparent; border: none; color: var(--gray); cursor: pointer; border-radius: 8px; font-weight: 500; transition: all 0.2s; }
+        .period-btn:hover { color: white; }
+        .period-btn.active { background: var(--primary); color: white; }
+        .content-area { padding: 30px; }
         
-        .badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            padding: 8px 25px;
-            border-radius: 25px;
-            font-size: 1rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-        }
+        /* STATS GRID */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; padding: 24px; transition: all 0.3s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+        .stat-card.zahel-revenue { border-left: 4px solid var(--gold); }
+        .stat-card.zahel-forfaits { border-left: 4px solid var(--success); }
+        .stat-card.zahel-taxes { border-left: 4px solid var(--info); }
+        .stat-card.zahel-amendes { border-left: 4px solid var(--danger); }
+        .stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .stat-header i { font-size: 2rem; opacity: 0.7; }
+        .stat-value { font-size: 2.5rem; font-weight: 700; }
+        .stat-label { color: var(--gray); font-size: 0.9rem; }
+        .stat-change { margin-top: 12px; font-size: 0.85rem; }
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--danger); }
         
-        /* GRID DE STATISTIQUES */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
+        /* CHARTS */
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .chart-container { height: 280px; position: relative; }
         
-        .card {
-            background: rgba(255, 255, 255, 0.07);
-            border-radius: 18px;
-            padding: 30px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
+        /* CATEGORY GRID */
+        .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+        .category-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .category-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .category-card i { font-size: 2rem; margin-bottom: 10px; }
+        .category-card.standard i { color: #60a5fa; }
+        .category-card.confort i { color: #34d399; }
+        .category-card.luxe i { color: #fbbf24; }
+        .category-card.moto i { color: #f87171; }
+        .category-card .cat-name { font-weight: 600; margin-bottom: 10px; }
+        .category-card .cat-value { font-size: 1.8rem; font-weight: 700; }
+        .category-card .cat-detail { font-size: 0.8rem; color: var(--gray); margin-top: 5px; }
         
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3498db, #2ecc71);
-        }
+        /* SECTEUR GRID */
+        .secteur-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+        .secteur-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+        .secteur-card h4 { color: var(--primary); margin-bottom: 12px; }
+        .secteur-card .secteur-value { font-size: 1.5rem; font-weight: 700; }
         
-        .card:hover {
-            transform: translateY(-8px);
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(52, 152, 219, 0.5);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-        }
+        /* TABS */
+        .tabs-container { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-bottom: 30px; }
+        .tabs-header { display: flex; border-bottom: 1px solid var(--border); padding: 0 20px; overflow-x: auto; }
+        .tab-btn { padding: 16px 20px; background: none; border: none; color: var(--gray); cursor: pointer; font-weight: 500; white-space: nowrap; border-bottom: 3px solid transparent; }
+        .tab-btn i { margin-right: 8px; }
+        .tab-btn:hover { color: white; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { padding: 24px; display: none; }
+        .tab-content.active { display: block; }
         
-        .card h3 {
-            color: #3498db;
-            margin-bottom: 25px;
-            font-size: 1.5rem;
-            padding-bottom: 15px;
-            border-bottom: 2px solid rgba(52, 152, 219, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        /* COMPARAISON CARDS */
+        .comparison-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .comparison-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+        .comparison-card h4 { margin-bottom: 20px; color: var(--gray); }
+        .comparison-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+        .comparison-value { font-size: 1.5rem; font-weight: 700; }
+        .comparison-variation { font-size: 0.9rem; }
         
-        .card h3::before {
-            font-size: 1.3rem;
-        }
+        /* TABLES */
+        .search-bar { display: flex; gap: 12px; margin-bottom: 24px; }
+        .search-input { flex: 1; padding: 14px 18px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; color: white; }
+        .search-input:focus { outline: none; border-color: var(--primary); }
+        .table-wrapper { overflow-x: auto; border-radius: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 16px; background: rgba(37,99,235,0.1); font-weight: 600; color: #94a3b8; font-size: 0.85rem; }
+        td { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: rgba(255,255,255,0.02); }
         
-        /* ITEMS DE STATISTIQUES */
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            transition: background 0.2s;
-        }
+        /* BADGES */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: rgba(16,185,129,0.2); color: #34d399; }
+        .badge-warning { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge-danger { background: rgba(239,68,68,0.2); color: #f87171; }
+        .badge-info { background: rgba(6,182,212,0.2); color: #67e8f9; }
+        .badge-purple { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .badge-gold { background: rgba(251,191,36,0.2); color: #fcd34d; }
         
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding-left: 10px;
-            padding-right: 10px;
-        }
+        /* BUTTONS */
+        .btn { padding: 10px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn:hover { transform: translateY(-1px); opacity: 0.9; }
         
-        .stat-item:last-child {
-            border-bottom: none;
-        }
+        /* ALERTS */
+        .alert-banner { padding: 16px 24px; border-radius: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
+        .alert-danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+        .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
+        .alert-info { background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); }
+        .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
         
-        .stat-label {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.9);
-        }
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--dark); border-radius: 24px; width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; border: 1px solid var(--border); }
+        .modal-header { padding: 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .modal-body { padding: 24px; overflow-y: auto; max-height: 60vh; }
+        .modal-footer { padding: 20px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px; }
         
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #2ecc71;
-            text-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
-        }
+        /* KPI CARDS */
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(6,182,212,0.05)); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+        .kpi-card .kpi-title { color: var(--gray); font-size: 0.9rem; margin-bottom: 8px; }
+        .kpi-card .kpi-value { font-size: 2rem; font-weight: 700; }
+        .kpi-card .kpi-trend { margin-top: 8px; font-size: 0.85rem; }
         
-        .stat-unit {
-            font-size: 1rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-left: 5px;
-        }
+        /* DETAIL GRID */
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .detail-item { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid var(--border); }
+        .detail-item label { color: var(--gray); font-size: 0.8rem; display: block; margin-bottom: 4px; }
+        .detail-item .value { font-size: 1.2rem; font-weight: 500; }
         
-        /* SECTION RECHERCHE */
-        .search-section {
-            background: rgba(255, 255, 255, 0.07);
-            border-radius: 18px;
-            padding: 35px;
-            margin-bottom: 40px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        
-        .search-title {
-            color: #f1c40f;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .search-box {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        
-        .search-input {
-            flex: 1;
-            padding: 18px 25px;
-            border: none;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.12);
-            color: white;
-            font-size: 1.1rem;
-            border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: #3498db;
-            background: rgba(255, 255, 255, 0.18);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-        }
-        
-        .search-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .search-btn {
-            padding: 18px 40px;
-            border: none;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .search-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #1f639b);
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(52, 152, 219, 0.4);
-        }
-        
-        .search-btn:active {
-            transform: translateY(0);
-        }
-        
-        /* RÉSULTATS */
-        .results {
-            margin-top: 30px;
-            display: none;
-        }
-        
-        .result-card {
-            background: rgba(46, 204, 113, 0.15);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(46, 204, 113, 0.3);
-        }
-        
-        .result-error {
-            background: rgba(231, 76, 60, 0.15);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(231, 76, 60, 0.3);
-        }
-        
-        /* FOOTER */
-        .footer {
-            text-align: center;
-            margin-top: 50px;
-            padding: 25px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.95rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .timestamp {
-            color: #f1c40f;
-            font-weight: bold;
-        }
+        /* COURSE INSPECTOR */
+        .course-inspector-result { margin-top: 30px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+        .course-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .course-detail-section { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; }
+        .course-detail-section h4 { color: var(--primary); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .detail-row { display: flex; margin-bottom: 8px; }
+        .detail-label { width: 120px; color: var(--gray); font-size: 0.9rem; }
+        .detail-value { flex: 1; font-weight: 500; }
         
         /* LOADING */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #3498db;
-            font-size: 1.2rem;
-        }
+        .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        /* EXPORT BUTTONS */
+        .export-buttons { display: flex; gap: 8px; }
         
         /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .search-box {
-                flex-direction: column;
-            }
-            
-            .search-btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .title {
-                font-size: 2rem;
-            }
-        }
-        
-        /* ALERTES */
-        .alert {
-            padding: 20px;
-            border-radius: 12px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .alert-warning {
-            background: rgba(241, 196, 15, 0.15);
-            border: 1px solid rgba(241, 196, 15, 0.3);
-            color: #f1c40f;
-        }
-        
-        .alert-success {
-            background: rgba(46, 204, 113, 0.15);
-            border: 1px solid rgba(46, 204, 113, 0.3);
-            color: #2ecc71;
-        }
-        
-        .alert-error {
-            background: rgba(231, 76, 60, 0.15);
-            border: 1px solid rgba(231, 76, 60, 0.3);
-            color: #e74c3c;
-        }
-
-        .alert-info {
-            background: rgba(52, 152, 219, 0.15);
-            border: 1px solid rgba(52, 152, 219, 0.3);
-            color: #3498db;
-        }
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .category-grid, .secteur-grid { grid-template-columns: repeat(2, 1fr); } .charts-row { grid-template-columns: 1fr; } .kpi-row, .comparison-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .sidebar { display: none; } .main-content { margin-left: 0; } .stats-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- EN-TÊTE -->
-        <div class="header">
-            <h1 class="title">🚗 ZAHEL - DASHBOARD PDG</h1>
-            <div class="badge">🔒 CONFIDENTIEL - ACCÈS RESTREINT AU PDG</div>
-            <p id="last-update">Chargement des données en temps réel...</p>
-        </div>
-        
-        <!-- ALERTE DE CONNEXION -->
-        <div id="connection-alert" class="alert alert-warning" style="display: none;">
-            <span>🔍</span>
-            <div>
-                <strong>Connexion en cours...</strong>
-                <p>Vérification de votre identité PDG</p>
+    <!-- LOGIN -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>🚗 ZAHEL</h1>
+                <div class="badge"><i class="fas fa-crown"></i> ACCÈS PDG PRODUCTION</div>
+            </div>
+            <div class="login-form">
+                <div class="input-group">
+                    <label><i class="fas fa-lock"></i> Mot de passe PDG</label>
+                    <input type="password" id="passwordInput" placeholder="••••••••" onkeypress="if(event.key==='Enter') authenticate()">
+                </div>
+                <button class="login-btn" id="loginBtn" onclick="authenticate()"><i class="fas fa-shield-alt"></i> ACCÉDER AU PANEL</button>
+                <div id="loginError" class="error-message"></div>
             </div>
         </div>
-        
-        <!-- STATISTIQUES -->
-        <div id="loading-stats" class="loading">
-            <div class="spinner"></div>
-            <p>Chargement des statistiques ZAHEL...</p>
-        </div>
-        
-        <div id="stats-container" style="display: none;">
-            <div class="stats-grid">
-                <!-- CARTE UTILISATEURS -->
-                <div class="card">
-                    <h3>👥 UTILISATEURS ACTIFS</h3>
-                    <div class="stat-item">
-                        <span class="stat-label">Conducteurs actifs</span>
-                        <div>
-                            <span class="stat-value" id="conducteurs-actifs">0</span>
-                            <span class="stat-unit">/</span>
-                            <span class="stat-value" id="conducteurs-total">0</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Clients actifs</span>
-                        <div>
-                            <span class="stat-value" id="clients-actifs">0</span>
-                            <span class="stat-unit">/</span>
-                            <span class="stat-value" id="clients-total">0</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Utilisateurs suspendus</span>
-                        <span class="stat-value" id="utilisateurs-suspendus">0</span>
-                    </div>
-                </div>
-                
-                <!-- CARTE COURSES -->
-                <div class="card">
-                    <h3>🚗 ACTIVITÉ DES COURSES</h3>
-                    <div class="stat-item">
-                        <span class="stat-label">Total courses</span>
-                        <span class="stat-value" id="courses-total">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Courses terminées</span>
-                        <span class="stat-value" id="courses-terminees">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Courses annulées</span>
-                        <span class="stat-value" id="courses-annulees">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Taux d'annulation</span>
-                        <span class="stat-value" id="taux-annulation">0%</span>
-                    </div>
-                </div>
-                
-                <!-- CARTE FINANCES -->
-                <div class="card">
-                    <h3>💰 PERFORMANCE FINANCIÈRE</h3>
-                    <div class="stat-item">
-                        <span class="stat-label">Revenus totaux</span>
-                        <span class="stat-value" id="revenus-totaux">0</span>
-                        <span class="stat-unit">KMF</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Taxes collectées</span>
-                        <span class="stat-value" id="taxes-totales">0</span>
-                        <span class="stat-unit">KMF</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Productivité</span>
-                        <span class="stat-value" id="productivite">0.0</span>
-                        <span class="stat-unit">courses/cond.</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Valeur moyenne</span>
-                        <span class="stat-value" id="valeur-moyenne">0</span>
-                        <span class="stat-unit">KMF/course</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- SECTION RECHERCHE -->
-            <div class="search-section">
-                <h2 class="search-title">🔍 RECHERCHE RAPIDE CONDUCTEUR</h2>
-                <p>Recherchez un conducteur par son immatriculation pour accéder à toutes ses informations (urgence PDG).</p>
-                
-                <div class="search-box">
-                    <input type="text" 
-                           class="search-input" 
-                           id="immatricule-input" 
-                           placeholder="Ex: ZH-327KYM"
-                           autocomplete="off">
-                    <button class="search-btn" onclick="rechercherConducteur()">
-                        <span>🔎</span>
-                        Rechercher
-                    </button>
-                </div>
-                
-                <div id="resultat-recherche" class="results">
-                    <!-- Les résultats apparaîtront ici -->
-                </div>
-            </div>
-        </div>
+    </div>
 
-<!-- ========== SECTION GESTION DES ABONNEMENTS ========== -->
-<div class="search-section" id="abonnements-section">
-    <h2 class="search-title">
-        <span>📦</span>
-        GESTION DES ABONNEMENTS CONDUCTEURS
-    </h2>
-    
-    <!-- ALERTE RÉSUMÉ -->
-    <div class="alert alert-info" style="margin-bottom: 20px; background: rgba(52, 152, 219, 0.15);">
-        <span>📊</span>
-        <div>
-            <strong>Aperçu des abonnements</strong>
-            <p><span id="abonnements-resume">Chargement...</span></p>
-        </div>
-    </div>
-    
-    <!-- CONFIGURATION GÉNÉRALE (MODIFIABLE) -->
-    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; margin-bottom: 30px;">
-        <h3 style="color: #f1c40f; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-            ⚙️ CONFIGURATION DES ABONNEMENTS
-        </h3>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-            <div>
-                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
-                    Forfait par défaut
-                </label>
-                <input type="number" id="config-forfait" value="50" min="1" max="500"
-                       style="width: 100%; padding: 12px; border-radius: 8px; 
-                              background: rgba(255,255,255,0.1); color: white; 
-                              border: 1px solid #3498db;">
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="dashboard">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>ZAHEL PRO</h2>
+                <div class="pdg-badge"><i class="fas fa-crown"></i> PDG</div>
             </div>
-            
-            <div>
-                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
-                    Prix par course (KMF)
-                </label>
-                <input type="number" id="config-prix" value="1000" min="100" step="100"
-                       style="width: 100%; padding: 12px; border-radius: 8px; 
-                              background: rgba(255,255,255,0.1); color: white; 
-                              border: 1px solid #3498db;">
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">📊 TABLEAU DE BORD</div>
+                    <div class="nav-item active" onclick="switchSection('overview')"><i class="fas fa-chart-pie"></i><span>Vue d'ensemble</span></div>
+                    <div class="nav-item" onclick="switchSection('finances')"><i class="fas fa-coins"></i><span>Analyse financière</span></div>
+                    <div class="nav-item" onclick="switchSection('categories')"><i class="fas fa-layer-group"></i><span>Par catégorie</span></div>
+                    <div class="nav-item" onclick="switchSection('secteurs')"><i class="fas fa-map-marked-alt"></i><span>Par secteur</span></div>
+                    <div class="nav-item" onclick="switchSection('comparaison')"><i class="fas fa-balance-scale"></i><span>Comparaisons</span></div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">🔍 OPÉRATIONS</div>
+                    <div class="nav-item" onclick="switchSection('recherche')"><i class="fas fa-search"></i><span>Enquêter</span></div>
+                    <div class="nav-item" onclick="switchSection('conducteurs')"><i class="fas fa-users"></i><span>Conducteurs</span></div>
+                    <div class="nav-item" onclick="switchSection('clients')"><i class="fas fa-user"></i><span>Clients</span></div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">💰 REVENUS</div>
+                    <div class="nav-item" onclick="switchSection('abonnements')"><i class="fas fa-box"></i><span>Forfaits</span></div>
+                    <div class="nav-item" onclick="switchSection('taxes')"><i class="fas fa-percent"></i><span>Taxes</span></div>
+                    <div class="nav-item" onclick="switchSection('amendes')"><i class="fas fa-gavel"></i><span>Amendes</span></div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">⚙️ ADMIN</div>
+                    <div class="nav-item" onclick="switchSection('verifications')"><i class="fas fa-check-shield"></i><span>Vérifications</span><span class="badge-count" id="verificationCount">0</span></div>
+                    <div class="nav-item" onclick="switchSection('audit')"><i class="fas fa-history"></i><span>Journal</span></div>
+                    <div class="nav-item" onclick="switchSection('config')"><i class="fas fa-cog"></i><span>Configuration</span></div>
+                </div>
             </div>
-            
-            <div>
-                <label style="display: block; margin-bottom: 8px; color: rgba(255,255,255,0.9);">
-                    Seuil d'alerte (courses)
-                </label>
-                <input type="number" id="config-seuil" value="5" min="1" max="20"
-                       style="width: 100%; padding: 12px; border-radius: 8px; 
-                              background: rgba(255,255,255,0.1); color: white; 
-                              border: 1px solid #3498db;">
+            <div class="sidebar-footer">
+                <div class="export-buttons" style="margin-bottom: 12px;">
+                    <button class="btn btn-outline btn-sm" onclick="exportDashboardPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button class="btn btn-outline btn-sm" onclick="exportDashboardExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                </div>
+                <button class="btn btn-outline btn-sm" style="width: 100%;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
             </div>
         </div>
         
-        <div style="text-align: right; margin-top: 20px;">
-            <button onclick="sauvegarderConfigAbonnements()" class="search-btn" 
-                    style="background: linear-gradient(135deg, #f1c40f, #e67e22);">
-                <span>💾</span>
-                SAUVEGARDER CONFIGURATION
-            </button>
-        </div>
-    </div>
-    
-    <!-- LISTE DES ABONNEMENTS -->
-    <div style="margin-top: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="color: #3498db;">📋 LISTE DES ABONNEMENTS</h3>
-            <button onclick="chargerAbonnements()" class="search-btn" 
-                    style="padding: 10px 20px; background: #3498db;">
-                <span>🔄</span>
-                Rafraîchir
-            </button>
-        </div>
-        
-        <div id="abonnements-container">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Chargement des abonnements...</p>
+        <div class="main-content">
+            <div class="main-header">
+                <div class="header-title" id="sectionTitle">Vue d'ensemble - ZAHEL</div>
+                <div class="header-actions">
+                    <div class="real-time-badge"><span class="pulse"></span><span>Temps réel</span></div>
+                    <div class="period-selector" id="periodSelector">
+                        <button class="period-btn active" onclick="changePeriod('day')">Jour</button>
+                        <button class="period-btn" onclick="changePeriod('week')">Semaine</button>
+                        <button class="period-btn" onclick="changePeriod('month')">Mois</button>
+                        <button class="period-btn" onclick="changePeriod('year')">Année</button>
+                    </div>
+                    <div class="time-display" id="liveClock">--:--:--</div>
+                    <div class="admin-profile"><i class="fas fa-user-tie"></i><span>PDG</span></div>
+                </div>
             </div>
+            <div class="content-area" id="contentArea"><div class="loading-spinner"><div class="spinner"></div></div></div>
         </div>
     </div>
-</div>
 
-<!-- ========== SECTION VÉRIFICATIONS WHATSAPP ========== -->
-<div class="search-section" id="whatsapp-section">
-    <h2 class="search-title">
-        <span>📱</span>
-        CONDUCTEURS EN ATTENTE DE VÉRIFICATION WHATSAPP
-    </h2>
-    
-    <!-- Alertes -->
-    <div class="alert alert-warning" style="margin-bottom: 20px;">
-        <span>⚠️</span>
-        <div>
-            <strong>Vérifications en attente</strong>
-            <p>Vous avez <span id="count-whatsapp">0</span> conducteur(s) à vérifier</p>
-        </div>
-    </div>
-    
-    <!-- Container pour la liste -->
-    <div id="whatsapp-container">
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Chargement des demandes de vérification...</p>
-        </div>
-    </div>
-</div>
-        
-        <!-- ========== SECTION GESTION DES AMENDES ========== -->
-<div class="search-section" id="amendes-section">
-    <h2 class="search-title">
-        <span>💰</span>
-        GESTION DES AMENDES EN ATTENTE
-    </h2>
-    
-    <!-- Alertes -->
-    <div class="alert alert-warning" style="margin-bottom: 20px;">
-        <span>⚠️</span>
-        <div>
-            <strong>Amendes à traiter</strong>
-            <p>Vous avez <span id="count-amendes">0</span> amendes en attente pour un total de 
-               <span id="total-amendes">0</span> KMF</p>
-        </div>
-    </div>
-    
-    <!-- Boutons de filtrage -->
-    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-        <button class="search-btn" onclick="chargerAmendes('en_attente')">
-            <span>🔄</span>
-            Amendes en attente
-        </button>
-        <button class="search-btn" onclick="chargerAmendes('payee')" 
-                style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-            <span>✅</span>
-            Amendes payées
-        </button>
-        <button class="search-btn" onclick="chargerAmendes('annulee')"
-                style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-            <span>❌</span>
-            Amendes annulées
-        </button>
-    </div>
-    
-    <!-- Container pour le tableau -->
-    <div id="amendes-container" class="results">
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Chargement des amendes...</p>
-        </div>
-    </div>
-    
-    <!-- Statistiques -->
-    <div id="stats-amendes" style="display: none; margin-top: 30px; padding: 20px; 
-          background: rgba(255, 255, 255, 0.05); border-radius: 10px;">
-        <h3>📊 Statistiques amendes</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            <div>
-                <strong>Total encaissé</strong>
-                <div style="font-size: 1.8em; color: #2ecc71;">
-                    <span id="stats-total-paye">0</span> KMF
-                </div>
-            </div>
-            <div>
-                <strong>En attente</strong>
-                <div style="font-size: 1.8em; color: #f39c12;">
-                    <span id="stats-en-attente">0</span> amendes
-                </div>
-            </div>
-            <div>
-                <strong>Montant total</strong>
-                <div style="font-size: 1.8em; color: #3498db;">
-                    <span id="stats-montant-total">0</span> KMF
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-        <!-- PIED DE PAGE -->
-        <div class="footer">
-            <p>© 2024 ZAHEL - Système de transport intelligent. Tous droits réservés.</p>
-            <p>Dernière mise à jour: <span id="timestamp" class="timestamp">--:--:--</span> | 
-               <span id="auto-refresh">Rafraîchissement automatique: <span id="countdown">30</span>s</span></p>
-            <p style="margin-top: 15px;">
-                <button onclick="chargerStatistiques()" style="padding: 10px 20px; background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; border-radius: 8px; cursor: pointer;">
-                    🔄 Rafraîchir manuellement
-                </button>
-            </p>
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3 id="modalTitle">Titre</h3><button class="btn btn-outline btn-sm" onclick="closeModal()"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
         </div>
     </div>
 
     <script>
         // ==================== CONFIGURATION ====================
-        const API_URL = 'http://localhost:5001/api/admin/statistiques';
-        const TOKEN = new URLSearchParams(window.location.search).get('token');
-        let countdownInterval;
+        const API_URL = 'http://localhost:5001';
+        let token = null;
+        let currentSection = 'overview';
+        let currentPeriod = 'day';
+        let statsData = null;
+        let financesData = null;
+        let categoriesData = null;
+        let secteursData = null;
+        let comparaisonData = null;
+        let conducteursData = [];
+        let clientsData = [];
+        let amendesData = [];
+        let abonnementsData = [];
+        let verificationsData = [];
+        let configData = {};
+        
+        let chartRevenue = null;
+        let chartCategories = null;
+        let chartSecteurs = null;
+        let chartEvolution = null;
         
         // ==================== INITIALISATION ====================
-        window.addEventListener('DOMContentLoaded', function() {
-            if (!TOKEN) {
-                showError('Token PDG manquant. Veuillez vous reconnecter.');
-                return;
-            }
-            
-            document.getElementById('connection-alert').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('connection-alert').style.display = 'none';
-                chargerStatistiques();
-                startAutoRefresh();
-            }, 1500);
+        document.addEventListener('DOMContentLoaded', () => {
+            startClock();
+            const savedToken = localStorage.getItem('zahel_pdg_token');
+            if (savedToken) { verifyToken(savedToken); }
         });
         
-        // ==================== FONCTIONS PRINCIPALES ====================
-        async function chargerStatistiques() {
+        function startClock() { setInterval(() => { const el = document.getElementById('liveClock'); if (el) el.textContent = new Date().toLocaleTimeString('fr-FR', { hour12: false }); }, 1000); }
+        
+        async function verifyToken(t) {
+            try { const r = await fetch(`${API_URL}/api/admin/statistiques`, { headers: { 'Authorization': t } }); if (r.ok) { token = t; showDashboard(); } else { localStorage.removeItem('zahel_pdg_token'); } } catch (e) {}
+        }
+        
+        async function authenticate() {
+            const p = document.getElementById('passwordInput').value;
+            const b = document.getElementById('loginBtn');
+            const e = document.getElementById('loginError');
+            if (!p) { e.textContent = 'Mot de passe requis'; e.classList.add('show'); return; }
+            b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             try {
-                showLoading(true);
-                
-                const response = await fetch(API_URL, {
-                    headers: {
-                        'Authorization': TOKEN
-                    }
-                });
-                
-                if (response.status === 401) {
-                    showError('Token PDG invalide. Veuillez rafraîchir la page.');
-                    return;
-                }
-                
-                if (!response.ok) {
-                    throw new Error(`Erreur ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    afficherStatistiques(data);
-                    showSuccess('Statistiques mises à jour avec succès!');
-
-                    chargerAbonnements(); 
-
-                    // ✅ AJOUTER CETTE LIGNE ICI
-                    chargerVerificationsWhatsApp();
-                } else {
-                    showError('Erreur dans les données reçues.');
-                }
-                
-            } catch (error) {
-                console.error('Erreur:', error);
-                showError(`Connexion impossible: ${error.message}`);
-            } finally {
-                showLoading(false);
+                const r = await fetch(`${API_URL}/api/admin/verify-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
+                const d = await r.json();
+                if (d.success) { token = d.token; localStorage.setItem('zahel_pdg_token', token); showDashboard(); }
+                else { e.textContent = 'Mot de passe incorrect'; e.classList.add('show'); }
+            } catch (x) { e.textContent = 'Erreur serveur'; e.classList.add('show'); }
+            finally { b.disabled = false; b.innerHTML = '<i class="fas fa-shield-alt"></i> ACCÉDER AU PANEL'; }
+        }
+        
+        function showDashboard() { document.getElementById('loginPage').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; loadOverview(); startAutoRefresh(); }
+        function logout() { localStorage.removeItem('zahel_pdg_token'); location.reload(); }
+        function startAutoRefresh() { setInterval(async () => { if (currentSection === 'overview') { await loadAllData(); renderOverview(); } }, 30000); }
+        
+        function changePeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            if (currentSection === 'overview') renderOverview();
+            else if (currentSection === 'finances') loadFinances();
+            else if (currentSection === 'comparaison') loadComparaison();
+        }
+        
+        // ==================== API ====================
+        async function fetchAPI(endpoint, options = {}) {
+            try { const r = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': token, ...options.headers }, ...options }); if (r.status === 401) { logout(); return { success: false }; } return await r.json(); }
+            catch (e) { return { success: false, error: e.message }; }
+        }
+        
+        async function loadAllData() {
+            try {
+                const [s, f, cat, sec, c, cl, am, ab, v] = await Promise.all([
+                    fetchAPI('/api/admin/statistiques'),
+                    fetchAPI('/api/admin/finances/zahel'),
+                    fetchAPI('/api/admin/categories/stats'),
+                    fetchAPI('/api/admin/secteurs/stats'),
+                    fetchAPI('/api/admin/conducteurs'),
+                    fetchAPI('/api/admin/clients'),
+                    fetchAPI('/api/amendes'),
+                    fetchAPI('/api/admin/abonnements'),
+                    fetchAPI('/api/admin/verifications/en_attente')
+                ]);
+                if (s.success) statsData = s.statistiques;
+                if (f.success) financesData = f;
+                if (cat.success) categoriesData = cat;
+                if (sec.success) secteursData = sec;
+                if (c.success) conducteursData = c.conducteurs || [];
+                if (cl.success) clientsData = cl.clients || [];
+                if (am.success) amendesData = am.amendes || [];
+                if (ab.success) abonnementsData = ab.abonnements || [];
+                if (v.success) { verificationsData = v.conducteurs || []; updateBadgeCounts(); }
+            } catch (e) { console.error(e); }
+        }
+        
+        function updateBadgeCounts() { const el = document.getElementById('verificationCount'); if (el) el.textContent = verificationsData.length || ''; }
+        function formatMoney(a) { return new Intl.NumberFormat('fr-FR').format(Math.round(a || 0)); }
+        
+        // ==================== NAVIGATION ====================
+        function switchSection(s) {
+            currentSection = s;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            const titles = {
+                overview: '📊 Vue d\'ensemble - ZAHEL', finances: '💰 Analyse financière ZAHEL', categories: '📂 Performance par catégorie',
+                secteurs: '🗺️ Analyse par secteur', comparaison: '📈 Comparaisons',
+                recherche: '🔍 Enquêter', conducteurs: '👥 Conducteurs', clients: '👤 Clients',
+                abonnements: '📦 Forfaits', taxes: '📊 Taxes collectées', amendes: '⚖️ Amendes',
+                verifications: '✅ Vérifications', audit: '📋 Journal', config: '⚙️ Configuration'
+            };
+            document.getElementById('sectionTitle').textContent = titles[s] || s;
+            
+            // Afficher/masquer le sélecteur de période
+            const periodSelector = document.getElementById('periodSelector');
+            if (['overview', 'finances', 'comparaison'].includes(s)) {
+                periodSelector.style.display = 'flex';
+            } else {
+                periodSelector.style.display = 'none';
             }
+            
+            const loaders = {
+                overview: loadOverview, finances: loadFinances, categories: loadCategories,
+                secteurs: loadSecteurs, comparaison: loadComparaison,
+                recherche: loadRecherche, conducteurs: loadConducteurs, clients: loadClients,
+                abonnements: loadAbonnements, taxes: loadTaxes, amendes: loadAmendes,
+                verifications: loadVerifications, audit: loadAudit, config: loadConfig
+            };
+            if (loaders[s]) loaders[s]();
         }
         
-        function afficherStatistiques(data) {
-            const stats = data.statistiques;
-            
-            // Mettre à jour l'heure
-            const timeStr = data.timestamp.substring(11, 19);
-            document.getElementById('last-update').textContent = 
-                `Dernière mise à jour: ${timeStr}`;
-            document.getElementById('timestamp').textContent = timeStr;
-            
-            // Utilisateurs
-            document.getElementById('conducteurs-actifs').textContent = stats.conducteurs.actifs;
-            document.getElementById('conducteurs-total').textContent = stats.conducteurs.total;
-            document.getElementById('clients-actifs').textContent = stats.clients.actifs;
-            document.getElementById('clients-total').textContent = stats.clients.total;
-            document.getElementById('utilisateurs-suspendus').textContent = 
-                (stats.conducteurs.total - stats.conducteurs.actifs) + 
-                (stats.clients.total - stats.clients.actifs);
-            
-            // Courses
-            document.getElementById('courses-total').textContent = stats.courses.total;
-            document.getElementById('courses-terminees').textContent = stats.courses.terminees;
-            document.getElementById('courses-annulees').textContent = stats.courses.annulees;
-            document.getElementById('taux-annulation').textContent = stats.courses.taux_annulation + '%';
-            
-            // Finances
-            document.getElementById('revenus-totaux').textContent = 
-                formatMoney(stats.finances.revenus_totaux);
-            document.getElementById('taxes-totales').textContent = 
-                formatMoney(stats.finances.taxes_totales);
-            
-            // Calculs supplémentaires
-            const productivite = stats.conducteurs.total > 0 ? 
-                (stats.courses.terminees / stats.conducteurs.total).toFixed(1) : '0.0';
-            document.getElementById('productivite').textContent = productivite;
-            
-            const valeurMoyenne = stats.courses.terminees > 0 ? 
-                Math.round(stats.finances.revenus_totaux / stats.courses.terminees) : 0;
-            document.getElementById('valeur-moyenne').textContent = formatMoney(valeurMoyenne);
-            
-            // Afficher le contenu
-            document.getElementById('stats-container').style.display = 'block';
+        // ==================== VUE D'ENSEMBLE ====================
+        async function loadOverview() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            await loadAllData();
+            renderOverview();
         }
         
-        async function rechercherConducteur() {
-            const immatricule = document.getElementById('immatricule-input').value.trim();
-            const resultDiv = document.getElementById('resultat-recherche');
+        function renderOverview() {
+            if (!financesData) { document.getElementById('contentArea').innerHTML = '<p>Chargement...</p>'; return; }
             
-            if (!immatricule) {
-                resultDiv.innerHTML = `
-                    <div class="result-error">
-                        <strong>❌ Erreur</strong>
-                        <p>Veuillez entrer une immatriculation valide.</p>
+            const f = financesData.finances;
+            const totalZAHEL = f.total_zahel || 0;
+            const cat = categoriesData?.categories || {};
+            const secteurs = secteursData?.secteurs || [];
+            
+            document.getElementById('contentArea').innerHTML = `
+                <div id="alertsContainer"></div>
+                
+                <!-- KPIs ZAHEL -->
+                <div class="stats-grid">
+                    <div class="stat-card zahel-revenue" onclick="switchSection('finances')">
+                        <div class="stat-header"><span class="stat-label">💰 Revenu TOTAL ZAHEL</span><i class="fas fa-trophy" style="color: var(--gold);"></i></div>
+                        <div class="stat-value">${formatMoney(totalZAHEL)}</div>
+                        <div class="stat-change">KMF</div>
                     </div>
-                `;
-                resultDiv.style.display = 'block';
+                    <div class="stat-card zahel-forfaits" onclick="switchSection('abonnements')">
+                        <div class="stat-header"><span class="stat-label">📦 Forfaits</span><i class="fas fa-box" style="color: var(--success);"></i></div>
+                        <div class="stat-value">${formatMoney(f.forfaits?.total || 0)}</div>
+                        <div class="stat-change">${f.forfaits?.nombre || 0} forfaits vendus</div>
+                    </div>
+                    <div class="stat-card zahel-taxes" onclick="switchSection('taxes')">
+                        <div class="stat-header"><span class="stat-label">📊 Taxes</span><i class="fas fa-percent" style="color: var(--info);"></i></div>
+                        <div class="stat-value">${formatMoney(f.taxes_courses?.total || 0)}</div>
+                        <div class="stat-change">${f.taxes_courses?.nombre_courses || 0} courses taxées</div>
+                    </div>
+                    <div class="stat-card zahel-amendes" onclick="switchSection('amendes')">
+                        <div class="stat-header"><span class="stat-label">⚖️ Amendes</span><i class="fas fa-gavel" style="color: var(--danger);"></i></div>
+                        <div class="stat-value">${formatMoney(f.amendes?.payees || 0)}</div>
+                        <div class="stat-change">${formatMoney(f.amendes?.dues || 0)} KMF en attente</div>
+                    </div>
+                </div>
+                
+                <!-- Performance par catégorie -->
+                <div class="category-grid">
+                    <div class="category-card standard" onclick="switchSection('categories')">
+                        <i class="fas fa-car"></i>
+                        <div class="cat-name">STANDARD</div>
+                        <div class="cat-value">${cat.standard || 0}</div>
+                        <div class="cat-detail">courses</div>
+                    </div>
+                    <div class="category-card confort" onclick="switchSection('categories')">
+                        <i class="fas fa-car-side"></i>
+                        <div class="cat-name">CONFORT</div>
+                        <div class="cat-value">${cat.confort || 0}</div>
+                        <div class="cat-detail">courses</div>
+                    </div>
+                    <div class="category-card luxe" onclick="switchSection('categories')">
+                        <i class="fas fa-crown"></i>
+                        <div class="cat-name">LUXE</div>
+                        <div class="cat-value">${cat.luxe || 0}</div>
+                        <div class="cat-detail">courses</div>
+                    </div>
+                    <div class="category-card moto" onclick="switchSection('categories')">
+                        <i class="fas fa-motorcycle"></i>
+                        <div class="cat-name">MOTO</div>
+                        <div class="cat-value">${cat.moto || 0}</div>
+                        <div class="cat-detail">courses</div>
+                    </div>
+                </div>
+                
+                <!-- Top secteurs -->
+                <div class="secteur-grid">
+                    ${secteurs.slice(0, 4).map(s => `
+                        <div class="secteur-card">
+                            <h4><i class="fas fa-map-pin"></i> ${s.nom}</h4>
+                            <div class="secteur-value">${s.courses || 0}</div>
+                            <div style="color: var(--gray);">courses</div>
+                            <div style="margin-top: 8px;">${formatMoney(s.revenus || 0)} KMF</div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Graphiques -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="chart-header"><h3><i class="fas fa-chart-line"></i> Évolution des revenus ZAHEL</h3></div>
+                        <div class="chart-container"><canvas id="chartRevenue"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header"><h3><i class="fas fa-chart-pie"></i> Répartition par catégorie</h3></div>
+                        <div class="chart-container"><canvas id="chartCategories"></canvas></div>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="tabs-container">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchOverviewTab('alertes')"><i class="fas fa-bell"></i> Alertes</button>
+                        <button class="tab-btn" onclick="switchOverviewTab('topconducteurs')"><i class="fas fa-trophy"></i> Top conducteurs</button>
+                        <button class="tab-btn" onclick="switchOverviewTab('recent')"><i class="fas fa-clock"></i> Activité récente</button>
+                    </div>
+                    <div class="tab-content active" id="overviewAlertes"></div>
+                    <div class="tab-content" id="overviewTopconducteurs"></div>
+                    <div class="tab-content" id="overviewRecent"></div>
+                </div>
+            `;
+            
+            renderAlerts();
+            renderCharts();
+            renderTopConducteurs();
+            renderRecentActivity();
+        }
+        
+        function renderAlerts() {
+            const alerts = [];
+            const critiques = abonnementsData.filter(a => a.abonnement?.courses_restantes <= 5);
+            if (critiques.length) alerts.push({ type: 'danger', icon: 'exclamation-triangle', title: 'Forfaits critiques', message: `${critiques.length} conducteur(s) ont moins de 5 courses` });
+            if (verificationsData.length) alerts.push({ type: 'warning', icon: 'clock', title: 'Vérifications', message: `${verificationsData.length} conducteur(s) à vérifier` });
+            const amendesImpayees = amendesData.filter(a => a.statut === 'en_attente');
+            if (amendesImpayees.length) alerts.push({ type: 'info', icon: 'gavel', title: 'Amendes impayées', message: `${amendesImpayees.length} amendes - ${formatMoney(amendesImpayees.reduce((s,a)=>s+a.montant,0))} KMF` });
+            
+            const container = document.getElementById('overviewAlertes');
+            const alertsContainer = document.getElementById('alertsContainer');
+            
+            if (!alerts.length) {
+                const html = `<div class="alert-banner alert-success"><i class="fas fa-check-circle"></i><div><strong>Système normal</strong> - Aucune alerte</div></div>`;
+                if (container) container.innerHTML = html;
+                if (alertsContainer) alertsContainer.innerHTML = '';
                 return;
             }
             
-            resultDiv.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Recherche du conducteur ${immatricule}...</p>
-                </div>
-            `;
-            resultDiv.style.display = 'block';
-            
-            try {
-                const response = await fetch(`http://localhost:5001/api/admin/conducteur/${immatricule}`, {
-                    headers: { 'Authorization': TOKEN }
-                });
-                
-                console.log('Status de l\'API:', response.status);
-                
-                if (response.status === 404) {
-                    resultDiv.innerHTML = `
-                    <div class="result-error">
-                        <strong>🔍 Conducteur non trouvé</strong>
-                        <p>L'immatriculation <strong>${immatricule}</strong> n'existe pas dans la base de données.</p>
-                    </div>`;
-                    
-                } else if (response.ok) {
-                    const data = await response.json();
-                    const conducteur = data.conducteur;
-                    
-                    const dateCreation = conducteur.dates.creation ? 
-                        new Date(conducteur.dates.creation).toLocaleDateString('fr-FR') : 'N/A';
-                    
-                    resultDiv.innerHTML = `
-                    <div class="result-card">
-                        <strong>✅ CONDUCTEUR TROUVÉ</strong>
-                        <div style="margin-top: 15px;">
-                            <p><strong>👤 Nom :</strong> ${conducteur.nom}</p>
-                            <p><strong>🔢 Immatricule :</strong> ${conducteur.immatricule}</p>
-                            <p><strong>📞 Téléphone :</strong> ${conducteur.telephone}</p>
-                            <p><strong>📧 Email :</strong> ${conducteur.email || 'N/A'}</p>
-                            <p><strong>🇰🇲 Nationalité :</strong> ${conducteur.nationalite || 'N/A'}</p>
-                            <p><strong>🆔 N° Identité :</strong> ${conducteur.numero_identite || 'N/A'}</p>
-                            
-                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <strong>🚗 VÉHICULE :</strong>
-                                <p style="margin: 5px 0 0 15px;">
-                                    ${conducteur.vehicule.marque} ${conducteur.vehicule.modele}<br>
-                                    Couleur: ${conducteur.vehicule.couleur}<br>
-                                    Plaque: ${conducteur.vehicule.plaque}<br>
-                                    Catégorie: ${conducteur.vehicule.categorie}
-                                </p>
-                            </div>
-                            
-                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <strong>📊 PERFORMANCE :</strong>
-                                <p style="margin: 5px 0 0 15px;">
-                                    Courses effectuées: <strong>${conducteur.performance.courses_effectuees}</strong><br>
-                                    Gains totaux: <strong>${formatMoney(conducteur.performance.gains_totaux)} KMF</strong>
-                                </p>
-                            </div>
-                            
-                            <div style="margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                                <strong>📈 STATUT :</strong>
-                                <p style="margin: 5px 0 0 15px;">
-                                    Compte: ${conducteur.statut.suspendu ? '❌ SUSPENDU' : '✅ ACTIF'}<br>
-                                    Disponible: ${conducteur.statut.disponible ? '✅ OUI' : '❌ NON'}<br>
-                                    En course: ${conducteur.statut.en_course ? '✅ OUI' : '❌ NON'}
-                                </p>
-                            </div>
-                            
-                            <p><strong>📅 Inscrit depuis :</strong> ${dateCreation}</p>
-                        </div>
-                    </div>`;
-                    
-                } else {
-                    resultDiv.innerHTML = `
-                    <div class="result-error">
-                        <strong>⚠️ Erreur ${response.status}</strong>
-                        <p>Impossible de récupérer les informations du conducteur.</p>
-                        <p style="margin-top: 10px; font-size: 0.9em;">
-                            ${response.statusText}
-                        </p>
-                    </div>`;
-                }
-                
-            } catch (error) {
-                resultDiv.innerHTML = `
-                <div class="result-error">
-                    <strong>⚠️ Erreur de connexion</strong>
-                    <p>Impossible de contacter le serveur API.</p>
-                    <p style="margin-top: 10px; font-size: 0.9em;">
-                        Vérifiez que le serveur ZAHEL est démarré.<br>
-                        Détail: ${error.message}
-                    </p>
-                </div>`;
-            }
+            const alertsHtml = alerts.map(a => `<div class="alert-banner alert-${a.type}"><i class="fas fa-${a.icon}"></i><div><strong>${a.title}</strong> - ${a.message}</div></div>`).join('');
+            if (container) container.innerHTML = alertsHtml;
+            if (alertsContainer) alertsContainer.innerHTML = alerts.slice(0, 2).map(a => `<div class="alert-banner alert-${a.type}"><i class="fas fa-${a.icon}"></i><div><strong>${a.title}</strong> - ${a.message}</div></div>`).join('');
         }
         
-        // ==================== FONCTIONS UTILITAIRES ====================
-        function formatMoney(amount) {
-            return new Intl.NumberFormat('fr-FR').format(Math.round(amount * 100) / 100);
-        }
-        
-        function showLoading(show) {
-            document.getElementById('loading-stats').style.display = show ? 'block' : 'none';
-            if (!show) {
-                document.getElementById('stats-container').style.display = 'block';
-            }
-        }
-        
-        function showError(message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-error';
-            alertDiv.innerHTML = `
-                <span>❌</span>
-                <div>
-                    <strong>Erreur</strong>
-                    <p>${message}</p>
-                </div>
-            `;
-            
-            document.querySelector('.container').insertBefore(alertDiv, document.getElementById('stats-container'));
-            setTimeout(() => alertDiv.remove(), 5000);
-        }
-        
-        function showSuccess(message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success';
-            alertDiv.innerHTML = `
-                <span>✅</span>
-                <div>
-                    <strong>Succès</strong>
-                    <p>${message}</p>
-                </div>
-            `;
-            
-            document.querySelector('.container').insertBefore(alertDiv, document.getElementById('stats-container'));
-            setTimeout(() => alertDiv.remove(), 3000);
-        }
-        
-        function startAutoRefresh() {
-            let countdown = 30;
-            const countdownElement = document.getElementById('countdown');
-            
-            countdownInterval = setInterval(() => {
-                countdown--;
-                countdownElement.textContent = countdown;
-                
-                if (countdown <= 0) {
-                    countdown = 30;
-                    chargerStatistiques();
-                }
-            }, 1000);
-        }
-        
-        // Empêcher la touche Entrée de soumettre le formulaire
-        document.getElementById('immatricule-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                rechercherConducteur();
-            }
-        });
-        
-        // ==================== GESTION DES AMENDES ====================
-        let amendesData = [];
-        
-        async function chargerAmendes(statut = 'en_attente') {
-            console.log('🔍 chargerAmendes appelée avec statut:', statut);
-            const container = document.getElementById('amendes-container');
-            container.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Chargement des amendes ${statut}...</p>
-                </div>
-            `;
-            
-            try {
-            console.log('🌐 Envoi requête à l\'API...');
-                const response = await fetch(`http://localhost:5001/api/amendes?statut=${statut}`, {
-                    headers: { 'Authorization': TOKEN }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Erreur ${response.status}`);
-                }
-                
-                const data = await response.json();
-                amendesData = data.amendes;
-                
-                // Mettre à jour les compteurs
-                document.getElementById('count-amendes').textContent = data.total;
-                document.getElementById('total-amendes').textContent = 
-                    formatMoney(data.total_montant);
-                
-                // Afficher les amendes
-                 function afficherAmendes(amendes, statut) {
-    console.log('🎯 afficherAmendes appelée avec', amendes.length, 'amendes');
-    console.log('Première amende:', amendes[0]);
-    
-    const container = document.getElementById('amendes-container');
-    console.log('Container:', container);
-    
-    if (!amendes || amendes.length === 0) {
-        container.innerHTML = `
-            <div class="result-card">
-                <strong>📭 Aucune amende ${statut}</strong>
-                <p>Base de données vide pour ce statut.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Version SIMPLE pour tester
-    let html = `
-        <div style="background: rgba(52, 152, 219, 0.1); padding: 20px; border-radius: 10px;">
-            <h3 style="color: #3498db; margin-bottom: 15px;">
-                📋 ${amendes.length} AMENDE(S) ${statut.toUpperCase()}
-            </h3>
-    `;
-    
-    amendes.forEach((amende, index) => {
-        html += `
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; margin-bottom: 10px; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong style="color: #3498db;">#${amende.id}</strong>
-                        <span style="color: white; margin-left: 10px;">${amende.nom_utilisateur || 'Utilisateur'}</span>
-                    </div>
-                    <div style="color: #e74c3c; font-weight: bold;">
-                        ${formatMoney(amende.montant)} KMF
-                    </div>
-                </div>
-                <div style="color: rgba(255,255,255,0.8); margin-top: 5px;">
-                    ${amende.raison.substring(0, 80)}${amende.raison.length > 80 ? '...' : ''}
-                </div>
-                <div style="margin-top: 10px;">
-                    <button onclick="payerAmendeDetails(${amende.id})" 
-                            style="padding: 5px 10px; background: #2ecc71; color: white; 
-                                   border: none; border-radius: 4px; margin-right: 5px;">
-                        💰 Payer
-                    </button>
-                    <button onclick="voirDetailsComplets(${amende.id})"
-                            style="padding: 5px 10px; background: #3498db; color: white; 
-                                   border: none; border-radius: 4px;">
-                        📄 Détails
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `
-        </div>
-    `;
-    
-    container.innerHTML = html;
-    container.style.display = 'block';
-    
-    console.log('✅ HTML généré et inséré');
-}
-
-                // =============== FONCTION POUR PAYER AVEC DÉTAILS ===============
-function payerAmendeDetails(amendeId) {
-    // Créer une modal pour saisir les détails de paiement
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    `;
-    
-    modal.innerHTML = `
-        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
-                    max-width: 500px; width: 90%;">
-            <h3 style="color: #3498db; margin-bottom: 20px;">
-                💰 Payer l'amende #${amendeId}
-            </h3>
-            
-            <form id="form-paiement-amende">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: white;">
-                        Mode de paiement
-                    </label>
-                    <select name="mode_paiement" style="width: 100%; padding: 10px; 
-                            border-radius: 5px; background: rgba(255,255,255,0.1); 
-                            color: white; border: 1px solid #3498db;">
-                        <option value="mvola">Mvola</option>
-                        <option value="orange_money">Orange Money</option>
-                        <option value="cash">Espèces</option>
-                        <option value="carte">Carte bancaire</option>
-                        <option value="via_course">Via prochaine course</option>
-                    </select>
-                </div>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: white;">
-                        Référence/N° de transaction
-                    </label>
-                    <input type="text" name="reference" style="width: 100%; padding: 10px;
-                           border-radius: 5px; background: rgba(255,255,255,0.1); 
-                           color: white; border: 1px solid #3498db;"
-                           placeholder="Ex: MV-123456789">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; color: white;">
-                        Attacher à une course ?
-                    </label>
-                    <div style="display: flex; gap: 15px;">
-                        <label style="color: white;">
-                            <input type="radio" name="attacher_course" value="oui"> Oui
-                        </label>
-                        <label style="color: white;">
-                            <input type="radio" name="attacher_course" value="non" checked> Non
-                        </label>
-                    </div>
-                    <small style="color: rgba(255,255,255,0.7);">
-                        Si oui, l'amende sera ajoutée au prix de la prochaine course du client
-                    </small>
-                </div>
-                
-                <div style="display: flex; gap: 15px; margin-top: 25px;">
-                    <button type="button" onclick="this.closest('div[style*=\"position: fixed\"]').remove()"
-                            style="padding: 10px 20px; background: #e74c3c; color: white;
-                                   border: none; border-radius: 5px; cursor: pointer; flex: 1;">
-                        Annuler
-                    </button>
-                    <button type="button" onclick="soumettrePaiementAmende(${amendeId})"
-                            style="padding: 10px 20px; background: #2ecc71; color: white;
-                                   border: none; border-radius: 5px; cursor: pointer; flex: 1;">
-                        Confirmer paiement
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// =============== SOUMETTRE LE PAIEMENT ===============
-async function soumettrePaiementAmende(amendeId) {
-    const form = document.getElementById('form-paiement-amende');
-    const formData = {
-        mode_paiement: form.mode_paiement.value,
-        reference: form.reference.value,
-        attacher_course: form.attacher_course.value
-    };
-    
-    // Fermer la modal
-    document.querySelector('div[style*="position: fixed"]').remove();
-    
-    try {
-        // Générer un token de paiement
-        const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                token_paiement: tokenPaiement,
-                mode_paiement: formData.mode_paiement,
-                reference: formData.reference,
-                attacher_course: formData.attacher_course === 'oui'
-            })
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            showSuccess(`Amende #${amendeId} payée ! Réçu: ${result.receipt}`);
-            
-            // Recharger la liste des amendes
-            chargerAmendes('en_attente');
-            
-            // Si attaché à une course, montrer un message spécial
-            if (formData.attacher_course === 'oui') {
-                setTimeout(() => {
-                    showSuccess('✅ Amende attachée à la prochaine course du client');
-                }, 1000);
-            }
-        } else {
-            const error = await response.json();
-            showError(`Erreur: ${error.error}`);
-        }
-    } catch (error) {
-        showError(`Erreur réseau: ${error.message}`);
-    }
-}
-
-// =============== ATTACHER À UNE COURSE ===============
-function attacherCourseAmende(amendeId) {
-    // Chercher l'amende dans les données
-    const amende = amendesData.find(a => a.id === amendeId);
-    if (!amende) return;
-    
-    // Vérifier si c'est un client
-    if (amende.utilisateur_type !== 'client') {
-        showError('❌ Seuls les amendes clients peuvent être attachées à une course');
-        return;
-    }
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    `;
-    
-    modal.innerHTML = `
-        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
-                    max-width: 500px; width: 90%;">
-            <h3 style="color: #3498db; margin-bottom: 20px;">
-                🚗 Attacher l'amende à une course
-            </h3>
-            
-            <p style="color: white; margin-bottom: 20px;">
-                <strong>Amende #${amendeId}</strong><br>
-                Client: ${amende.nom_utilisateur}<br>
-                Montant: ${formatMoney(amende.montant)} KMF
-            </p>
-            
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; color: white;">
-                    Choisir l'option
-                </label>
-                <select id="option-attachement" style="width: 100%; padding: 10px; 
-                        border-radius: 5px; background: rgba(255,255,255,0.1); 
-                        color: white; border: 1px solid #3498db;">
-                    <option value="prochaine_course">Prochaine course du client</option>
-                    <option value="course_existante">Course existante</option>
-                    <option value="reduction_50">Réduction 50% sur la course</option>
-                </select>
-            </div>
-            
-            <div id="course-selection" style="display: none; margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; color: white;">
-                    Sélectionner une course
-                </label>
-                <select style="width: 100%; padding: 10px; 
-                        border-radius: 5px; background: rgba(255,255,255,0.1); 
-                        color: white; border: 1px solid #3498db;">
-                    <option value="">Chargement des courses...</option>
-                </select>
-            </div>
-            
-            <div style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
-                <strong>Fonctionnement :</strong><br>
-                1. Le client sera notifié qu'il peut payer via sa prochaine course<br>
-                2. Le prix de la course sera augmenté du montant de l'amende<br>
-                3. Le chauffeur récupérera l'amende pour la compagnie<br>
-                4. L'entreprise suivra cette amende dans la section "Amendes chauffeurs"
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-top: 25px;">
-                <button type="button" onclick="this.closest('div[style*=\"position: fixed\"]').remove()"
-                        style="padding: 10px 20px; background: #e74c3c; color: white;
-                               border: none; border-radius: 5px; cursor: pointer; flex: 1;">
-                    Annuler
-                </button>
-                <button type="button" onclick="confirmerAttachement(${amendeId})"
-                        style="padding: 10px 20px; background: #9b59b6; color: white;
-                               border: none; border-radius: 5px; cursor: pointer; flex: 1;">
-                    Confirmer l'attachement
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Afficher/masquer la sélection de course
-    document.getElementById('option-attachement').addEventListener('change', function(e) {
-        document.getElementById('course-selection').style.display = 
-            e.target.value === 'course_existante' ? 'block' : 'none';
-    });
-}
-
-// =============== VOIR DÉTAILS COMPLETS ===============
-function voirDetailsComplets(amendeId) {
-    const amende = amendesData.find(a => a.id === amendeId);
-    if (!amende) return;
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-        padding: 20px;
-    `;
-    
-    modal.innerHTML = `
-        <div style="background: #0c2461; padding: 30px; border-radius: 10px; 
-                    max-width: 800px; max-height: 90vh; overflow-y: auto;
-                    width: 100%;">
-            <h2 style="color: #3498db; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                📄 Détails complets - Amende #${amende.id}
-            </h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
-                <!-- Colonne gauche -->
-                <div>
-                    <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
-                        👤 INFORMATIONS UTILISATEUR
-                    </h3>
-                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Type:</strong>
-                            <span style="color: white; margin-left: 10px; padding: 3px 8px; 
-                                  background: ${amende.utilisateur_type === 'client' ? '#3498db20' : '#e74c3c20'}; 
-                                  border-radius: 4px;">
-                                ${amende.utilisateur_type.toUpperCase()}
-                            </span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Nom:</strong>
-                            <span style="color: white; margin-left: 10px;">
-                                ${amende.nom_utilisateur || 'Non spécifié'}
-                            </span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Contact:</strong>
-                            <span style="color: white; margin-left: 10px;">
-                                ${amende.contact || 'N/A'}
-                            </span>
-                        </div>
-                        <div>
-                            <strong style="color: #3498db;">ID utilisateur:</strong>
-                            <span style="color: white; margin-left: 10px;">
-                                ${amende.utilisateur_id}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Colonne droite -->
-                <div>
-                    <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
-                        💰 INFORMATIONS FINANCIÈRES
-                    </h3>
-                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Montant:</strong>
-                            <span style="color: #e74c3c; font-size: 1.3em; font-weight: bold; margin-left: 10px;">
-                                ${formatMoney(amende.montant)} KMF
-                            </span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Statut:</strong>
-                            <span style="color: ${amende.statut === 'en_attente' ? '#f39c12' : 
-                                               amende.statut === 'payee' ? '#2ecc71' : '#e74c3c'}; 
-                                  margin-left: 10px; padding: 3px 8px; 
-                                  background: ${amende.statut === 'en_attente' ? '#f39c1220' : 
-                                               amende.statut === 'payee' ? '#2ecc7120' : '#e74c3c20'}; 
-                                  border-radius: 4px; font-weight: bold;">
-                                ${amende.statut.toUpperCase()}
-                            </span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong style="color: #3498db;">Mode paiement:</strong>
-                            <span style="color: white; margin-left: 10px;">
-                                ${amende.mode_paiement || 'Non spécifié'}
-                            </span>
-                        </div>
-                        <div>
-                            <strong style="color: #3498db;">Référence:</strong>
-                            <span style="color: white; margin-left: 10px;">
-                                ${amende.reference || 'N/A'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Raison et dates -->
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
-                    📝 RAISON ET DATES
-                </h3>
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #3498db; display: block; margin-bottom: 5px;">
-                            Raison de l'amende:
-                        </strong>
-                        <div style="color: white; padding: 10px; background: rgba(0,0,0,0.2); 
-                             border-radius: 5px;">
-                            ${amende.raison}
-                        </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <strong style="color: #3498db;">Date création:</strong><br>
-                            <span style="color: white;">
-                                ${new Date(amende.date_amende).toLocaleString('fr-FR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit'
-                                })}
-                            </span>
-                        </div>
-                        <div>
-                            <strong style="color: #3498db;">Date paiement:</strong><br>
-                            <span style="color: white;">
-                                ${amende.date_paiement ? 
-                                    new Date(amende.date_paiement).toLocaleString('fr-FR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    }) : 'Non payée'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Historique associé -->
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">
-                    📊 HISTORIQUE ASSOCIÉ
-                </h3>
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                    <div style="color: white; font-style: italic;">
-                        ${amende.attachee_course ? 
-                            '✅ Cette amende est attachée à une course' : 
-                            '❌ Non attachée à une course'}
-                    </div>
-                    ${amende.course_associee ? `
-                    <div style="margin-top: 10px; color: white;">
-                        <strong>Course associée:</strong> ${amende.course_associee}
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <!-- Bouton fermer -->
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
-                        style="padding: 10px 30px; background: #e74c3c; color: white; 
-                               border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                    Fermer
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-                
-                // Charger les statistiques globales
-                chargerStatistiquesAmendes();
-                
-            } catch (error) {
-                container.innerHTML = `
-                    <div class="result-error">
-                        <strong>❌ Erreur de chargement</strong>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-        
-        async function payerAmendeDetails(amendeId) {
-            const amende = amendesData.find(a => a.id === amendeId);
-            if (!amende) {
-                showError('Amende non trouvée');
-                return;
-            }
-            
-            // Créer un formulaire modal détaillé
-            const modalHTML = `
-                <div id="modal-paiement" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                      background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
-                    <div style="background: #0c2461; padding: 30px; border-radius: 10px; width: 500px; max-width: 90vw;">
-                        <h2 style="color: #3498db; margin-bottom: 20px;">💰 PAIEMENT D'AMENDE #${amende.id}</h2>
-                        
-                        <!-- Informations amende -->
-                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px;">
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #3498db;">👤 Utilisateur:</strong><br>
-                                <span style="color: white;">${amende.nom_utilisateur || 'Non spécifié'}</span><br>
-                                <small style="color: rgba(255,255,255,0.7);">(${amende.utilisateur_type.toUpperCase()})</small>
-                            </div>
-                            
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #3498db;">💰 Montant:</strong><br>
-                                <span style="color: #e74c3c; font-weight: bold; font-size: 1.2em;">
-                                    ${formatMoney(amende.montant)} KMF
-                                </span>
-                            </div>
-                            
-                            <div>
-                                <strong style="color: #3498db;">📝 Raison:</strong><br>
-                                <span style="color: white;">${amende.raison}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Formulaire de paiement -->
-                        <form id="form-paiement">
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; color: white;">📱 Mode de paiement *</label>
-                                <select id="mode-paiement" required
-                                        style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
-                                               background: rgba(255,255,255,0.1); color: white;">
-                                    <option value="">-- Sélectionnez --</option>
-                                    <option value="Mvola">Mvola</option>
-                                    <option value="Orange Money">Orange Money</option>
-                                    <option value="Cash">Espèces</option>
-                                    <option value="Virement">Virement bancaire</option>
-                                    <option value="Course">Via course future</option>
-                                </select>
-                            </div>
-                            
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 5px; color: white;">🔢 Numéro/Référence *</label>
-                                <input type="text" id="reference-paiement" required
-                                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
-                                              background: rgba(255,255,255,0.1); color: white;"
-                                       placeholder="Ex: 034 00 00 00 ou REF-123456">
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; margin-bottom: 5px; color: white;">💬 Commentaire (optionnel)</label>
-                                <textarea id="commentaire-paiement" rows="3"
-                                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #3498db; 
-                                              background: rgba(255,255,255,0.1); color: white;"
-                                       placeholder="Note sur le paiement..."></textarea>
-                            </div>
-                            
-                            <!-- Boutons -->
-                            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                                <button type="button" onclick="fermerModalPaiement()"
-                                        style="padding: 10px 20px; background: #e74c3c; color: white; 
-                                               border: none; border-radius: 5px; cursor: pointer;">
-                                    ❌ Annuler
-                                </button>
-                                <button type="submit" 
-                                        style="padding: 10px 20px; background: #2ecc71; color: white; 
-                                               border: none; border-radius: 5px; cursor: pointer;">
-                                    ✅ Confirmer le paiement
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            // Ajouter le modal au DOM
-            const modalDiv = document.createElement('div');
-            modalDiv.innerHTML = modalHTML;
-            document.body.appendChild(modalDiv);
-            
-            // Empêcher la fermeture en cliquant à l'extérieur
-            document.getElementById('modal-paiement').addEventListener('click', function(e) {
-                if (e.target.id === 'modal-paiement') {
-                    fermerModalPaiement();
-                }
-            });
-            
-            // Gérer la soumission du formulaire
-            document.getElementById('form-paiement').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const modePaiement = document.getElementById('mode-paiement').value;
-                const reference = document.getElementById('reference-paiement').value;
-                const commentaire = document.getElementById('commentaire-paiement').value;
-                
-                if (!modePaiement || !reference) {
-                    showError('Veuillez remplir tous les champs obligatoires (*)');
-                    return;
-                }
-                
-                // Afficher un indicateur de chargement
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '⏳ Traitement en cours...';
-                submitBtn.disabled = true;
-                
-                try {
-                    const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                    
-                    const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            token_paiement: tokenPaiement,
-                            mode_paiement: modePaiement,
-                            reference: reference,
-                            commentaire: commentaire,
-                            date_paiement: new Date().toISOString()
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        showSuccess(`
-✅ AMENDE PAYÉE AVEC SUCCÈS !
-
-Détails :
-• Amende #${amendeId}
-• Montant : ${formatMoney(amende.montant)} KMF
-• Mode : ${modePaiement}
-• Référence : ${reference}
-• Reçu : ${result.receipt}
-                        `.trim());
-                        
-                        fermerModalPaiement();
-                        
-                        // Recharger les amendes après 1 seconde
-                        setTimeout(() => {
-                            chargerAmendes('en_attente');
-                            chargerStatistiquesAmendes();
-                        }, 1000);
-                        
-                    } else {
-                        const error = await response.json();
-                        showError(`❌ Erreur: ${error.error || 'Paiement échoué'}`);
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                    }
-                } catch (error) {
-                    showError(`❌ Erreur de connexion: ${error.message}`);
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            });
-        }
-        
-        function fermerModalPaiement() {
-            const modal = document.getElementById('modal-paiement');
-            if (modal) {
-                modal.remove();
-            }
-        }
-        
-        async function payerAmende(amendeId) {
-            const amende = amendesData.find(a => a.id === amendeId);
-            if (!amende) return;
-            
-            const message = `
-💰 PAIEMENT D'AMENDE
-
-ID: #${amende.id}
-Utilisateur: ${amende.nom_utilisateur || 'N/A'} (${amende.utilisateur_type})
-Montant: ${formatMoney(amende.montant)} KMF
-Raison: ${amende.raison}
-
-Confirmer le paiement ?
-            `.trim();
-            
-            if (!confirm(message)) {
-                return;
-            }
-            
-            // Demander le mode de paiement
-            const modePaiement = prompt('Mode de paiement (Mvola, Orange Money, Cash, etc.) :', 'Mvola');
-            if (!modePaiement) return;
-            
-            // Demander la référence
-            const reference = prompt('Référence du paiement :', `REF-${Date.now()}`);
-            if (!reference) return;
-            
-            try {
-                const tokenPaiement = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                // Afficher un indicateur de chargement
-                const button = document.querySelector(`button[onclick*="payerAmende(${amendeId})"]`);
-                const originalText = button.innerHTML;
-                button.innerHTML = '<span>⏳</span> Traitement...';
-                button.disabled = true;
-                
-                const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/payer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+        function renderCharts() {
+            // Graphique d'évolution des revenus
+            const ctx1 = document.getElementById('chartRevenue')?.getContext('2d');
+            if (ctx1 && financesData?.evolution_mensuelle) {
+                if (chartRevenue) chartRevenue.destroy();
+                const evolution = financesData.evolution_mensuelle.slice(-12);
+                chartRevenue = new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: evolution.map(e => e.mois.substring(5)),
+                        datasets: [
+                            { label: 'Forfaits', data: evolution.map(e => e.forfaits || 0), borderColor: '#10b981', tension: 0.3, fill: false },
+                            { label: 'Taxes', data: evolution.map(e => e.taxes || 0), borderColor: '#06b6d4', tension: 0.3, fill: false },
+                            { label: 'Amendes', data: evolution.map(e => e.amendes || 0), borderColor: '#ef4444', tension: 0.3, fill: false }
+                        ]
                     },
-                    body: JSON.stringify({
-                        token_paiement: tokenPaiement,
-                        mode_paiement: modePaiement,
-                        reference: reference
-                    })
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'white' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
                 });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    // Mettre à jour l'interface immédiatement
-                    amende.statut = 'payee';
-                    amende.date_paiement = new Date().toISOString();
-                    
-                    showSuccess(`
-✅ AMENDE PAYÉE !
-
-ID: #${amende.id}
-Reçu: ${result.receipt}
-Mode: ${modePaiement}
-Référence: ${reference}
-
-L'amende a été marquée comme payée.
-                    `.trim());
-                    
-                    // Recharger la liste
-                    setTimeout(() => {
-                        chargerAmendes('en_attente');
-                        chargerStatistiquesAmendes();
-                    }, 1000);
-                    
-                } else {
-                    const error = await response.json();
-                    showError(`❌ Erreur: ${error.error || 'Paiement échoué'}`);
-                    
-                    // Réactiver le bouton
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                }
-            } catch (error) {
-                showError(`❌ Erreur de connexion: ${error.message}`);
-            }
-        }
-        
-        async function annulerAmende(amendeId) {
-            const amende = amendesData.find(a => a.id === amendeId);
-            if (!amende) return;
-            
-            const message = `
-❌ ANNULATION D'AMENDE
-
-ID: #${amende.id}
-Utilisateur: ${amende.nom_utilisateur || 'N/A'} (${amende.utilisateur_type})
-Montant: ${formatMoney(amende.montant)} KMF
-Raison: ${amende.raison}
-
-Veuillez entrer la raison de l'annulation :
-            `.trim();
-            
-            const raison = prompt(message, 'Erreur dans le système / Paiement déjà effectué');
-            if (!raison) return;
-            
-            // Confirmation finale
-            if (!confirm(`Confirmer l'annulation pour : "${raison.substring(0, 50)}..." ?`)) {
-                return;
             }
             
-            try {
-                // Afficher un indicateur de chargement
-                const buttons = document.querySelectorAll(`button[onclick*="annulerAmende(${amendeId})"]`);
-                if (buttons.length > 0) {
-                    const button = buttons[0];
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<span>⏳</span> Traitement...';
-                    button.disabled = true;
-                }
-                
-                const response = await fetch(`http://localhost:5001/api/amendes/${amendeId}/annuler`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': TOKEN,
-                        'Content-Type': 'application/json'
+            // Graphique camembert par catégorie
+            const ctx2 = document.getElementById('chartCategories')?.getContext('2d');
+            if (ctx2 && categoriesData?.categories) {
+                if (chartCategories) chartCategories.destroy();
+                const cat = categoriesData.categories;
+                chartCategories = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Standard', 'Confort', 'Luxe', 'Moto'],
+                        datasets: [{
+                            data: [cat.standard || 0, cat.confort || 0, cat.luxe || 0, cat.moto || 0],
+                            backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171'],
+                            borderWidth: 0
+                        }]
                     },
-                    body: JSON.stringify({ 
-                        raison: raison,
-                        annule_par: 'PDG',
-                        date_annulation: new Date().toISOString()
-                    })
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'white' } } } }
                 });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    // Mettre à jour l'interface immédiatement
-                    amende.statut = 'annulee';
-                    
-                    showSuccess(`
-✅ AMENDE ANNULÉE !
-
-ID: #${amende.id}
-Raison: ${raison.substring(0, 100)}...
-Message: ${result.message}
-                    `.trim());
-                    
-                    // Recharger la liste
-                    setTimeout(() => {
-                        chargerAmendes('en_attente');
-                        chargerStatistiquesAmendes();
-                    }, 1000);
-                    
-                } else {
-                    const error = await response.json();
-                    showError(`❌ Erreur: ${error.error || 'Annulation échouée'}`);
-                    
-                    // Réactiver le bouton
-                    const buttons = document.querySelectorAll(`button[onclick*="annulerAmende(${amendeId})"]`);
-                    if (buttons.length > 0) {
-                        buttons[0].innerHTML = '<span>❌</span> Annuler';
-                        buttons[0].disabled = false;
-                    }
-                }
-            } catch (error) {
-                showError(`❌ Erreur de connexion: ${error.message}`);
             }
         }
         
-        async function chargerStatistiquesAmendes() {
-            try {
-                const response = await fetch('http://localhost:5001/api/admin/statistiques', {
-                    headers: { 'Authorization': TOKEN }
+        function renderTopConducteurs() {
+            const top = [...conducteursData].sort((a, b) => (b.gains || 0) - (a.gains || 0)).slice(0, 5);
+            document.getElementById('overviewTopconducteurs').innerHTML = `
+                <div class="table-wrapper"><table><thead><tr><th>#</th><th>Conducteur</th><th>Courses</th><th>Gains</th><th>Catégorie</th></tr></thead><tbody>
+                    ${top.map((c, i) => `<tr><td>${i+1}</td><td><strong>${c.nom}</strong><br><small>${c.immatricule}</small></td><td>${c.courses || 0}</td><td>${formatMoney(c.gains || 0)} KMF</td><td><span class="badge badge-info">${c.categorie || 'standard'}</span></td></tr>`).join('')}
+                </tbody></table></div>
+            `;
+        }
+        
+        function renderRecentActivity() {
+            document.getElementById('overviewRecent').innerHTML = `
+                <div class="kpi-row">
+                    <div class="kpi-card"><div class="kpi-title">📅 Aujourd'hui</div><div class="kpi-value">${statsData?.courses?.aujourd_hui || 0}</div><div class="kpi-trend">courses</div></div>
+                    <div class="kpi-card"><div class="kpi-title">🚗 En cours</div><div class="kpi-value">${statsData?.courses?.en_cours || 0}</div><div class="kpi-trend">courses actives</div></div>
+                    <div class="kpi-card"><div class="kpi-title">👥 Conducteurs en ligne</div><div class="kpi-value">${statsData?.conducteurs?.en_ligne || 0}/${statsData?.conducteurs?.actifs || 0}</div><div class="kpi-trend">disponibles</div></div>
+                </div>
+            `;
+        }
+        
+        function switchOverviewTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`overview${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        }
+        
+        // ==================== FINANCES ====================
+        async function loadFinances() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            await loadAllData();
+            
+            const f = financesData?.finances || {};
+            const total = f.total_zahel || 0;
+            
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-coins"></i> Analyse financière ZAHEL</h2>
+                
+                <div class="kpi-row">
+                    <div class="kpi-card"><div class="kpi-title"><i class="fas fa-box"></i> Forfaits</div><div class="kpi-value" style="color: var(--success);">${formatMoney(f.forfaits?.total || 0)}</div><div class="kpi-trend">${f.forfaits?.nombre || 0} forfaits</div></div>
+                    <div class="kpi-card"><div class="kpi-title"><i class="fas fa-percent"></i> Taxes</div><div class="kpi-value" style="color: var(--info);">${formatMoney(f.taxes_courses?.total || 0)}</div><div class="kpi-trend">${f.taxes_courses?.nombre_courses || 0} courses</div></div>
+                    <div class="kpi-card"><div class="kpi-title"><i class="fas fa-gavel"></i> Amendes (payées)</div><div class="kpi-value" style="color: var(--danger);">${formatMoney(f.amendes?.payees || 0)}</div><div class="kpi-trend">${formatMoney(f.amendes?.dues || 0)} KMF en attente</div></div>
+                </div>
+                
+                <div class="kpi-row">
+                    <div class="kpi-card"><div class="kpi-title">📊 TOTAL ZAHEL</div><div class="kpi-value" style="color: var(--gold);">${formatMoney(total)}</div><div class="kpi-trend">KMF</div></div>
+                    <div class="kpi-card"><div class="kpi-title">📈 Taux de collecte amendes</div><div class="kpi-value">${f.amendes?.payees + f.amendes?.dues > 0 ? Math.round((f.amendes.payees / (f.amendes.payees + f.amendes.dues)) * 100) : 0}%</div><div class="kpi-trend">des amendes payées</div></div>
+                    <div class="kpi-card"><div class="kpi-title">💰 Panier moyen forfait</div><div class="kpi-value">${f.forfaits?.nombre > 0 ? formatMoney(f.forfaits.total / f.forfaits.nombre) : 0}</div><div class="kpi-trend">KMF/forfait</div></div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header"><h3><i class="fas fa-chart-bar"></i> Évolution mensuelle (12 derniers mois)</h3></div>
+                    <div class="chart-container" style="height: 350px;"><canvas id="chartEvolution"></canvas></div>
+                </div>
+                
+                <div class="tabs-container" style="margin-top: 20px;">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchFinanceTab('forfaits')">Forfaits</button>
+                        <button class="tab-btn" onclick="switchFinanceTab('taxes')">Taxes</button>
+                        <button class="tab-btn" onclick="switchFinanceTab('amendes')">Amendes</button>
+                    </div>
+                    <div class="tab-content active" id="financeForfaits"></div>
+                    <div class="tab-content" id="financeTaxes"></div>
+                    <div class="tab-content" id="financeAmendes"></div>
+                </div>
+            `;
+            
+            // Graphique d'évolution
+            const ctx = document.getElementById('chartEvolution')?.getContext('2d');
+            if (ctx && financesData?.evolution_mensuelle) {
+                const evolution = financesData.evolution_mensuelle.slice(-12);
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: evolution.map(e => e.mois),
+                        datasets: [
+                            { label: 'Forfaits', data: evolution.map(e => e.forfaits || 0), backgroundColor: '#10b981' },
+                            { label: 'Taxes', data: evolution.map(e => e.taxes || 0), backgroundColor: '#06b6d4' },
+                            { label: 'Amendes', data: evolution.map(e => e.amendes || 0), backgroundColor: '#ef4444' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } }, scales: { x: { stacked: true, ticks: { color: '#94a3b8' } }, y: { stacked: true, ticks: { color: '#94a3b8' } } } }
                 });
+            }
+            
+            document.getElementById('financeForfaits').innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Date</th><th>Conducteur</th><th>Courses</th><th>Montant</th><th>Taxes incluses</th></tr></thead><tbody>${abonnementsData.filter(a => a.abonnement?.montant_paye).slice(0, 10).map(a => `<tr><td>${a.abonnement?.date_paiement ? new Date(a.abonnement.date_paiement).toLocaleDateString('fr-FR') : 'N/A'}</td><td>${a.nom} (${a.immatricule})</td><td>${a.abonnement?.courses_achetees || 0}</td><td>${formatMoney(a.abonnement?.montant_paye || 0)} KMF</td><td>${formatMoney(a.abonnement?.taxes_payees || 0)} KMF</td></tr>`).join('')}</tbody></table></div>`;
+            document.getElementById('financeTaxes').innerHTML = `<p style="color: var(--gray); margin-bottom: 16px;">Taxes de ${configData.pourcentage_taxes?.valeur || 5}% collectées sur les courses terminées.</p><div class="kpi-card"><div class="kpi-title">Total taxes collectées</div><div class="kpi-value">${formatMoney(f.taxes_courses?.total || 0)} KMF</div></div>`;
+            document.getElementById('financeAmendes').innerHTML = `<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Type</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead><tbody>${amendesData.slice(0, 10).map(a => `<tr><td>#${a.id}</td><td>${a.utilisateur_type}</td><td>${formatMoney(a.montant)} KMF</td><td><span class="badge ${a.statut === 'payee' ? 'badge-success' : 'badge-warning'}">${a.statut}</span></td><td>${new Date(a.date_amende).toLocaleDateString('fr-FR')}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+        
+        function switchFinanceTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`finance${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+        }
+        
+        // ==================== CATÉGORIES ====================
+        async function loadCategories() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            await loadAllData();
+            
+            const cat = categoriesData?.categories || {};
+            const revenus = categoriesData?.revenus || {};
+            const conducteurs = categoriesData?.conducteurs || {};
+            const total = categoriesData?.total_courses || 0;
+            
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-layer-group"></i> Performance par catégorie</h2>
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    const stats = data.statistiques;
-                    
-                    // Afficher les statistiques
-                    document.getElementById('stats-total-paye').textContent = 
-                        formatMoney(stats.finances.amendes_payees || 0);
-                    document.getElementById('stats-en-attente').textContent = 
-                        amendesData.length;
-                    document.getElementById('stats-montant-total').textContent = 
-                        formatMoney(amendesData.reduce((sum, a) => sum + a.montant, 0));
-                    
-                    document.getElementById('stats-amendes').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Erreur stats amendes:', error);
+                <div class="category-grid">
+                    <div class="category-card standard">
+                        <i class="fas fa-car"></i>
+                        <div class="cat-name">STANDARD</div>
+                        <div class="cat-value">${cat.standard || 0}</div>
+                        <div class="cat-detail">${revenus.standard ? formatMoney(revenus.standard.total) : 0} KMF</div>
+                        <div class="cat-detail">${conducteurs.standard?.en_ligne || 0}/${conducteurs.standard?.total || 0} en ligne</div>
+                    </div>
+                    <div class="category-card confort">
+                        <i class="fas fa-car-side"></i>
+                        <div class="cat-name">CONFORT</div>
+                        <div class="cat-value">${cat.confort || 0}</div>
+                        <div class="cat-detail">${revenus.confort ? formatMoney(revenus.confort.total) : 0} KMF</div>
+                        <div class="cat-detail">${conducteurs.confort?.en_ligne || 0}/${conducteurs.confort?.total || 0} en ligne</div>
+                    </div>
+                    <div class="category-card luxe">
+                        <i class="fas fa-crown"></i>
+                        <div class="cat-name">LUXE</div>
+                        <div class="cat-value">${cat.luxe || 0}</div>
+                        <div class="cat-detail">${revenus.luxe ? formatMoney(revenus.luxe.total) : 0} KMF</div>
+                        <div class="cat-detail">${conducteurs.luxe?.en_ligne || 0}/${conducteurs.luxe?.total || 0} en ligne</div>
+                    </div>
+                    <div class="category-card moto">
+                        <i class="fas fa-motorcycle"></i>
+                        <div class="cat-name">MOTO</div>
+                        <div class="cat-value">${cat.moto || 0}</div>
+                        <div class="cat-detail">${revenus.moto ? formatMoney(revenus.moto.total) : 0} KMF</div>
+                        <div class="cat-detail">${conducteurs.moto?.en_ligne || 0}/${conducteurs.moto?.total || 0} en ligne</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-row">
+                    <div class="kpi-card"><div class="kpi-title">Total courses</div><div class="kpi-value">${total}</div></div>
+                    <div class="kpi-card"><div class="kpi-title">Catégorie dominante</div><div class="kpi-value">${Object.entries(cat).sort((a,b) => b[1] - a[1])[0]?.[0]?.toUpperCase() || 'N/A'}</div></div>
+                    <div class="kpi-card"><div class="kpi-title">Prix moyen</div><div class="kpi-value">${formatMoney(Object.values(revenus).reduce((s, r) => s + (r.moyen || 0), 0) / 4)} KMF</div></div>
+                </div>
+                
+                <div class="charts-row">
+                    <div class="chart-card"><div class="chart-header"><h3>Répartition des courses</h3></div><div class="chart-container"><canvas id="chartCatPie"></canvas></div></div>
+                    <div class="chart-card"><div class="chart-header"><h3>Revenus par catégorie</h3></div><div class="chart-container"><canvas id="chartCatBar"></canvas></div></div>
+                </div>
+            `;
+            
+            const ctx1 = document.getElementById('chartCatPie')?.getContext('2d');
+            if (ctx1) {
+                new Chart(ctx1, { type: 'doughnut', data: { labels: ['Standard', 'Confort', 'Luxe', 'Moto'], datasets: [{ data: [cat.standard || 0, cat.confort || 0, cat.luxe || 0, cat.moto || 0], backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171'] }] }, options: { plugins: { legend: { labels: { color: 'white' } } } } });
+            }
+            
+            const ctx2 = document.getElementById('chartCatBar')?.getContext('2d');
+            if (ctx2) {
+                new Chart(ctx2, { type: 'bar', data: { labels: ['Standard', 'Confort', 'Luxe', 'Moto'], datasets: [{ label: 'Revenus (KMF)', data: [revenus.standard?.total || 0, revenus.confort?.total || 0, revenus.luxe?.total || 0, revenus.moto?.total || 0], backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#f87171'] }] }, options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } } });
             }
         }
         
-        function voirDetailsAmende(amendeId) {
-            const amende = amendesData.find(a => a.id === amendeId);
-            if (!amende) return;
+        // ==================== SECTEURS ====================
+        async function loadSecteurs() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            await loadAllData();
             
-            const details = `
-                <div class="result-card">
-                    <h3>📄 Détails amende #${amende.id}</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                        <div>
-                            <strong>Type:</strong> ${amende.utilisateur_type}<br>
-                            <strong>Nom:</strong> ${amende.nom_utilisateur}<br>
-                            <strong>Contact:</strong> ${amende.contact}
+            const secteurs = secteursData?.secteurs || [];
+            
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-map-marked-alt"></i> Analyse par secteur géographique</h2>
+                
+                <div class="secteur-grid">
+                    ${secteurs.map(s => `
+                        <div class="secteur-card">
+                            <h4><i class="fas fa-map-pin"></i> ${s.nom}</h4>
+                            <div class="secteur-value">${s.courses || 0}</div>
+                            <div style="color: var(--gray);">courses</div>
+                            <div style="margin-top: 8px; font-size: 1.2rem;">${formatMoney(s.revenus || 0)} KMF</div>
+                            <div style="color: var(--gray);">Prix moyen: ${formatMoney(s.prix_moyen || 0)} KMF</div>
                         </div>
-                        <div>
-                            <strong>Montant:</strong> ${formatMoney(amende.montant)} KMF<br>
-                            <strong>Statut:</strong> ${amende.statut}<br>
-                            <strong>Date:</strong> ${new Date(amende.date_amende).toLocaleString('fr-FR')}
-                        </div>
-                    </div>
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 5px;">
-                        <strong>Raison:</strong><br>
-                        ${amende.raison}
-                    </div>
+                    `).join('')}
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header"><h3><i class="fas fa-chart-bar"></i> Répartition des courses par secteur</h3></div>
+                    <div class="chart-container" style="height: 300px;"><canvas id="chartSecteurs"></canvas></div>
                 </div>
             `;
             
-            // Afficher dans une modal simple
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-            `;
-            
-            modal.innerHTML = `
-                <div style="background: #0c2461; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
-                    ${details}
-                    <div style="text-align: center; margin-top: 20px;">
-                        <button onclick="this.parentElement.parentElement.remove()" 
-                                style="padding: 10px 30px; background: #e74c3c; color: white; 
-                                       border: none; border-radius: 5px; cursor: pointer;">
-                            Fermer
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-        }
-        
-        // Charger automatiquement les amendes au chargement de la page
-        setTimeout(() => {
-            if (TOKEN) {
-                chargerAmendes('en_attente');
-            }
-        }, 2000);
-        // ========== VÉRIFICATIONS WHATSAPP ==========
-async function chargerVerificationsWhatsApp() {
-    const container = document.getElementById('whatsapp-container');
-    const countSpan = document.getElementById('count-whatsapp');
-    
-    try {
-        const response = await fetch('/api/admin/verifications/en_attente', {
-            headers: { 'Authorization': TOKEN }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Erreur ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // Mettre à jour le compteur
-        countSpan.textContent = data.count;
-        
-        if (data.count === 0) {
-            container.innerHTML = `
-                <div class="result-card" style="text-align: center; padding: 30px;">
-                    <strong style="color: #2ecc71; font-size: 1.2em;">✅ AUCUNE VÉRIFICATION EN ATTENTE</strong>
-                    <p style="margin-top: 10px; color: rgba(255,255,255,0.7);">
-                        Tous les conducteurs sont vérifiés ou en attente d'inscription.
-                    </p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Construire la liste
-        let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
-        
-        data.conducteurs.forEach(cond => {
-            const dateInscription = new Date(cond.date_inscription).toLocaleDateString('fr-FR', {
-                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-            
-            html += `
-                <div class="result-card" style="border-left: 4px solid #25D366;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                                <span style="background: ${cond.categorie === 'confort' ? '#3498db' : '#9b59b6'}; 
-                                      padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">
-                                    ${cond.categorie.toUpperCase()}
-                                </span>
-                                <strong style="color: #3498db;">${cond.immatricule}</strong>
-                            </div>
-                            
-                            <div style="font-size: 1.2em; margin-bottom: 5px;">
-                                👤 ${cond.nom}
-                            </div>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 5px; margin-bottom: 5px;">
-                                <div>📞 ${cond.telephone}</div>
-                                <div>🚗 ${cond.vehicule}</div>
-                                <div>🎨 ${cond.couleur}</div>
-                                <div>🪪 ${cond.plaque}</div>
-                            </div>
-                            
-                            <div style="color: rgba(255,255,255,0.7); font-size: 0.9em;">
-                                📅 Inscrit le ${dateInscription}
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <button onclick="activerConducteur(${cond.id}, '${cond.immatricule}')" 
-                                    style="padding: 12px 20px; background: linear-gradient(135deg, #25D366, #128C7E); 
-                                           color: white; border: none; border-radius: 8px; cursor: pointer; 
-                                           font-weight: bold; display: flex; align-items: center; gap: 8px;">
-                                <span>✅</span>
-                                VÉRIFIER & ACTIVER
-                            </button>
-                            
-                            <button onclick="ouvrirWhatsappAdmin('${cond.telephone}', '${cond.immatricule}', '${cond.categorie}')" 
-                                    style="padding: 12px 20px; background: linear-gradient(135deg, #3498db, #2980b9); 
-                                           color: white; border: none; border-radius: 8px; cursor: pointer; 
-                                           font-weight: bold; display: flex; align-items: center; gap: 8px;">
-                                <span>📱</span>
-                                VOIR SUR WHATSAPP
-                            </button>
-                            
-                            <button onclick="refuserConducteur(${cond.id}, '${cond.immatricule}')" 
-                                    style="padding: 8px 15px; background: transparent; 
-                                           color: #e74c3c; border: 1px solid #e74c3c; border-radius: 8px; cursor: pointer; 
-                                           font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
-                                <span>❌</span>
-                                Refuser
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        container.innerHTML = html;
-        
-    } catch (error) {
-        console.error('Erreur:', error);
-        container.innerHTML = `
-            <div class="result-error">
-                <strong>⚠️ Erreur de chargement</strong>
-                <p>${error.message}</p>
-            </div>
-        `;
-    }
-}
-
-// Activer un conducteur
-async function activerConducteur(conducteurId, immatricule) {
-    if (!confirm(`✅ Confirmer la vérification pour ${immatricule} ?`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`http://localhost:5001/api/admin/verifications/${conducteurId}/activer`, {
-            method: 'POST',
-            headers: {
-                'Authorization': TOKEN,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showSuccess(`✅ ${data.message}`);
-            chargerVerificationsWhatsApp();  // Recharger la liste
-        } else {
-            showError(`❌ Erreur: ${data.error}`);
-        }
-        
-    } catch (error) {
-        console.error('Erreur activation:', error);
-        showError('❌ Erreur de connexion');
-    }
-}
-
-// Ouvrir WhatsApp
-function ouvrirWhatsappAdmin(telephone, immatricule, categorie) {
-    const numero = telephone.replace('+', '').replace(/\s/g, '');
-    const message = `Vérification ZAHEL pour ${immatricule} (${categorie})`;
-    const url = `https://wa.me/${numero}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-}
-
-// Refuser un conducteur
-async function refuserConducteur(conducteurId, immatricule) {
-    const raison = prompt(`❌ Raison du refus pour ${immatricule} :`, 
-                          "Documents incomplets / Non conformes");
-    
-    if (!raison) return;
-    
-    if (!confirm(`Confirmer le refus de ${immatricule} ?`)) {
-        return;
-    }
-    
-    try {
-        // Note: Il faudrait créer cette route dans l'API
-        showSuccess(`✅ Conducteur ${immatricule} refusé (simulation)`);
-        chargerVerificationsWhatsApp();
-        
-    } catch (error) {
-        showError('❌ Erreur de connexion');
-    }
-}
-// ========== GESTION DES ABONNEMENTS ==========
-let abonnementsData = [];
-
-async function chargerAbonnements() {
-    const container = document.getElementById('abonnements-container');
-    
-    try {
-        const response = await fetch('http://localhost:5001/api/admin/abonnements', {
-            headers: { 'Authorization': TOKEN }
-        });
-        
-        if (!response.ok) throw new Error(`Erreur ${response.status}`);
-        
-        const data = await response.json();
-        abonnementsData = data.abonnements;
-        
-        // Mettre à jour le résumé
-        const total = data.total;
-        const critiques = data.abonnements.filter(a => a.courses_restantes <= 5).length;
-        const totalCourses = data.abonnements.reduce((sum, a) => sum + a.courses_restantes, 0);
-        
-        document.getElementById('abonnements-resume').innerHTML = `
-            📊 Total: ${total} conducteurs | 
-            🔴 Critiques: ${critiques} | 
-            📦 Courses restantes: ${totalCourses}
-        `;
-        
-        // Charger la configuration
-        chargerConfigAbonnements();
-        
-        // Afficher la liste
-        afficherListeAbonnements(data.abonnements);
-        
-    } catch (error) {
-        container.innerHTML = `
-            <div class="result-error">
-                <strong>❌ Erreur de chargement</strong>
-                <p>${error.message}</p>
-            </div>
-        `;
-    }
-}
-
-function afficherListeAbonnements(abonnements) {
-    const container = document.getElementById('abonnements-container');
-    
-    if (!abonnements || abonnements.length === 0) {
-        container.innerHTML = `
-            <div class="result-card" style="text-align: center; padding: 40px;">
-                <strong style="color: #3498db;">📭 Aucun abonnement trouvé</strong>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
-    
-    abonnements.forEach(abo => {
-        const pourcentage = Math.round((abo.courses_achetees - abo.courses_restantes) / abo.courses_achetees * 100);
-        const couleurStatus = abo.status_color || 
-            (abo.courses_restantes <= 5 ? 'red' : 
-             abo.courses_restantes <= 10 ? 'orange' : 
-             abo.courses_restantes <= 20 ? 'yellow' : 'green');
-        
-        html += `
-            <div class="result-card" style="border-left: 4px solid ${couleurStatus === 'red' ? '#e74c3c' : 
-                                                                     couleurStatus === 'orange' ? '#e67e22' : 
-                                                                     couleurStatus === 'yellow' ? '#f1c40f' : 
-                                                                     '#2ecc71'};">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <strong style="color: #3498db;">${abo.immatricule}</strong>
-                            <span style="background: ${abo.disponible ? '#2ecc71' : '#e74c3c'}; 
-                                  padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
-                                ${abo.disponible ? 'DISPO' : 'INDISPO'}
-                            </span>
-                            ${abo.compte_suspendu ? `
-                            <span style="background: #e74c3c; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
-                                SUSPENDU
-                            </span>
-                            ` : ''}
-                        </div>
-                        
-                        <div style="font-size: 1.1em; margin-bottom: 5px;">
-                            👤 ${abo.nom}
-                        </div>
-                        
-                        <div style="color: rgba(255,255,255,0.8); margin-bottom: 10px;">
-                            📞 ${abo.telephone}
-                        </div>
-                        
-                        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>📦 Abonnement:</span>
-                                <span style="font-weight: bold; color: ${couleurStatus === 'red' ? '#e74c3c' : 
-                                                                         couleurStatus === 'orange' ? '#e67e22' : 
-                                                                         couleurStatus === 'yellow' ? '#f1c40f' : 
-                                                                         '#2ecc71'};">
-                                    ${abo.courses_restantes}/${abo.courses_achetees}
-                                </span>
-                            </div>
-                            
-                            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 5px 0;">
-                                <div style="width: ${pourcentage}%; height: 8px; 
-                                            background: ${couleurStatus === 'red' ? '#e74c3c' : 
-                                                         couleurStatus === 'orange' ? '#e67e22' : 
-                                                         couleurStatus === 'yellow' ? '#f1c40f' : 
-                                                         '#2ecc71'}; 
-                                            border-radius: 4px;"></div>
-                            </div>
-                            
-                            <div style="display: flex; gap: 15px; margin-top: 10px;">
-                                <input type="number" id="recharge-${abo.conducteur_id}" 
-                                       value="50" min="1" max="500" step="10"
-                                       style="width: 100px; padding: 5px; border-radius: 4px; 
-                                              background: rgba(255,255,255,0.1); color: white; 
-                                              border: 1px solid #3498db;">
-                                <button onclick="rechargerAbonnement(${abo.conducteur_id}, '${abo.immatricule}')"
-                                        style="padding: 5px 15px; background: #2ecc71; color: white; 
-                                               border: none; border-radius: 4px; cursor: pointer;">
-                                    🔄 Recharger
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-async function chargerConfigAbonnements() {
-    try {
-        const response = await fetch('http://localhost:5001/api/admin/abonnements/config', {
-            headers: { 'Authorization': TOKEN }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                document.getElementById('config-forfait').value = data.config.forfait_defaut || 50;
-                document.getElementById('config-prix').value = data.config.prix_par_course || 1000;
-                document.getElementById('config-seuil').value = data.config.seuil_alerte || 5;
+            const ctx = document.getElementById('chartSecteurs')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: secteurs.map(s => s.nom),
+                        datasets: [{
+                            label: 'Nombre de courses',
+                            data: secteurs.map(s => s.courses),
+                            backgroundColor: '#2563eb',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
+                });
             }
         }
-    } catch (error) {
-        console.error('Erreur chargement config:', error);
-    }
-}
-
-async function sauvegarderConfigAbonnements() {
-    const config = {
-        forfait_defaut: document.getElementById('config-forfait').value,
-        prix_par_course: document.getElementById('config-prix').value,
-        seuil_alerte: document.getElementById('config-seuil').value
-    };
-    
-    try {
-        const response = await fetch('http://localhost:5001/api/admin/abonnements/config', {
-            method: 'POST',
-            headers: {
-                'Authorization': TOKEN,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            showSuccess('✅ Configuration sauvegardée !');
-        } else {
-            showError('❌ Erreur: ' + data.error);
+        // ==================== COMPARAISONS ====================
+        async function loadComparaison() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            
+            const periode = currentPeriod === 'day' ? 'week' : currentPeriod;
+            const res = await fetchAPI(`/api/admin/comparaison/${periode}`);
+            if (!res.success) { document.getElementById('contentArea').innerHTML = '<p>Erreur chargement</p>'; return; }
+            
+            const data = res;
+            const varCourses = data.variation.courses;
+            const varRevenus = data.variation.revenus;
+            const varTaxes = data.variation.taxes;
+            
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-balance-scale"></i> Comparaisons - ${periode === 'week' ? 'Semaine' : periode === 'month' ? 'Mois' : 'Année'}</h2>
+                
+                <div class="comparison-grid">
+                    <div class="comparison-card">
+                        <h4><i class="fas fa-car"></i> Courses</h4>
+                        <div class="comparison-row"><span>Actuel</span><span class="comparison-value">${data.actuel.courses}</span></div>
+                        <div class="comparison-row"><span>Précédent</span><span class="comparison-value">${data.precedent.courses}</span></div>
+                        <div class="comparison-row"><span>Variation</span><span class="comparison-variation ${varCourses >= 0 ? 'positive' : 'negative'}"><i class="fas fa-${varCourses >= 0 ? 'arrow-up' : 'arrow-down'}"></i> ${Math.abs(varCourses)}%</span></div>
+                    </div>
+                    <div class="comparison-card">
+                        <h4><i class="fas fa-money-bill"></i> Revenus courses</h4>
+                        <div class="comparison-row"><span>Actuel</span><span class="comparison-value">${formatMoney(data.actuel.revenus)} KMF</span></div>
+                        <div class="comparison-row"><span>Précédent</span><span class="comparison-value">${formatMoney(data.precedent.revenus)} KMF</span></div>
+                        <div class="comparison-row"><span>Variation</span><span class="comparison-variation ${varRevenus >= 0 ? 'positive' : 'negative'}"><i class="fas fa-${varRevenus >= 0 ? 'arrow-up' : 'arrow-down'}"></i> ${Math.abs(varRevenus)}%</span></div>
+                    </div>
+                    <div class="comparison-card">
+                        <h4><i class="fas fa-percent"></i> Taxes ZAHEL</h4>
+                        <div class="comparison-row"><span>Actuel</span><span class="comparison-value">${formatMoney(data.actuel.taxes)} KMF</span></div>
+                        <div class="comparison-row"><span>Précédent</span><span class="comparison-value">${formatMoney(data.precedent.taxes)} KMF</span></div>
+                        <div class="comparison-row"><span>Variation</span><span class="comparison-variation ${varTaxes >= 0 ? 'positive' : 'negative'}"><i class="fas fa-${varTaxes >= 0 ? 'arrow-up' : 'arrow-down'}"></i> ${Math.abs(varTaxes)}%</span></div>
+                    </div>
+                </div>
+                
+                <div class="alert-banner alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>Comparaison entre la période actuelle (${data.periode}) et la période précédente équivalente.</div>
+                </div>
+            `;
         }
-    } catch (error) {
-        showError('❌ Erreur de connexion');
-    }
-}
-
-async function rechargerAbonnement(conducteurId, immatricule) {
-    const courses = document.getElementById(`recharge-${conducteurId}`).value;
-    
-    if (!confirm(`Recharger ${courses} courses pour ${immatricule} ?`)) {
-        return;
-    }
-    
-    const prix = document.getElementById('config-prix').value;
-    const total = courses * prix;
-    
-    if (!confirm(`💰 Montant à payer: ${total.toLocaleString()} KMF\nConfirmer le rechargement ?`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch('http://localhost:5001/api/admin/abonnements/recharger', {
-            method: 'POST',
-            headers: {
-                'Authorization': TOKEN,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                conducteur_id: conducteurId,
-                courses: parseInt(courses)
-            })
-        });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            showSuccess(`✅ ${data.message}`);
-            chargerAbonnements(); // Recharger la liste
-        } else {
-            showError('❌ Erreur: ' + (data.error || 'Rechargement échoué'));
+        // ==================== ENQUÊTER ====================
+        function loadRecherche() {
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-search"></i> Enquêter sur une course</h2>
+                <div class="search-bar"><input type="text" class="search-input" id="courseCodeInput" placeholder="Ex: ZAHEL-UEW1564" style="text-transform: uppercase;"><button class="btn btn-primary" onclick="inspectCourse()"><i class="fas fa-search"></i> Inspecter</button></div>
+                <div id="courseResult" class="course-inspector-result" style="display: none;"></div>
+            `;
         }
-    } catch (error) {
-        showError('❌ Erreur de connexion');
-    }
-}
+        
+        async function inspectCourse() {
+            const code = document.getElementById('courseCodeInput').value.trim().toUpperCase();
+            if (!code) return alert('Code requis');
+            const div = document.getElementById('courseResult'); div.style.display = 'block'; div.innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            const res = await fetchAPI(`/api/admin/course/${code}`);
+            if (!res.success) { div.innerHTML = `<div class="alert-banner alert-danger">Course non trouvée</div>`; return; }
+            const c = res.course;
+            const departLat = c.trajet.depart.lat || 'N/A', departLng = c.trajet.depart.lng || 'N/A', arriveeLat = c.trajet.arrivee.lat || 'N/A', arriveeLng = c.trajet.arrivee.lng || 'N/A';
+            const departGpsLink = (departLat !== 'N/A' && departLng !== 'N/A') ? `<a href="https://www.google.com/maps?q=${departLat},${departLng}" target="_blank" style="color: #60a5fa;">📍 ${departLat}, ${departLng}</a>` : '<span style="color: #64748b;">📍 N/A</span>';
+            const arriveeGpsLink = (arriveeLat !== 'N/A' && arriveeLng !== 'N/A') ? `<a href="https://www.google.com/maps?q=${arriveeLat},${arriveeLng}" target="_blank" style="color: #60a5fa;">📍 ${arriveeLat}, ${arriveeLng}</a>` : '<span style="color: #64748b;">📍 N/A</span>';
+            div.innerHTML = `<div style="display:flex;justify-content:space-between;"><h3>Course ${c.code}</h3><span class="badge badge-info">${c.statut}</span></div>
+                <div class="course-detail-grid"><div><div class="course-detail-section"><h4>Client</h4><div class="detail-row"><span>Nom</span><span>${c.client.nom} (${c.client.telephone})</span></div></div>
+                ${c.conducteur ? `<div class="course-detail-section"><h4>Conducteur</h4><div class="detail-row"><span>Nom</span><span>${c.conducteur.nom} (${c.conducteur.immatricule})</span></div></div>` : ''}
+                <div class="course-detail-section"><h4>Finances</h4><div class="detail-row"><span>Prix</span><span>${formatMoney(c.prix_final)} KMF</span></div></div></div>
+                <div><div class="course-detail-section"><h4>Trajet</h4><div class="detail-row"><span>Départ</span><span>${c.trajet.depart.adresse || 'N/A'}</span></div><div class="detail-row"><span></span><span>${departGpsLink}</span></div>
+                <div class="detail-row"><span>Arrivée</span><span>${c.trajet.arrivee.adresse || 'N/A'}</span></div><div class="detail-row"><span></span><span>${arriveeGpsLink}</span></div></div></div></div>`;
+        }
+        
+        // ==================== CONDUCTEURS ====================
+        async function loadConducteurs() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; await loadAllData(); renderConducteursTable(); }
+        function renderConducteursTable() {
+            document.getElementById('contentArea').innerHTML = `<div class="search-bar"><input type="text" class="search-input" id="searchConducteur" placeholder="Rechercher..." onkeyup="filterConducteurs()"><button class="btn btn-outline" onclick="exportConducteurs()"><i class="fas fa-download"></i></button></div><div class="table-wrapper"><table><thead><tr><th>Immatricule</th><th>Nom</th><th>Téléphone</th><th>Catégorie</th><th>Courses</th><th>Gains</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="conducteursBody"></tbody></table></div>`;
+            filterConducteurs();
+        }
+        function filterConducteurs() {
+            const search = document.getElementById('searchConducteur')?.value?.toLowerCase() || '';
+            let filtered = conducteursData;
+            if (search) filtered = filtered.filter(c => (c.immatricule||'').toLowerCase().includes(search) || (c.nom||'').toLowerCase().includes(search));
+            document.getElementById('conducteursBody').innerHTML = filtered.map(c => `<tr><td>${c.immatricule}</td><td>${c.nom}</td><td>${c.telephone}</td><td>${c.categorie||'standard'}</td><td>${c.courses||0}</td><td>${formatMoney(c.gains||0)}</td><td><span class="badge ${c.disponible?'badge-success':'badge-warning'}">${c.disponible?'En ligne':'Hors ligne'}</span></td><td><button class="btn btn-outline btn-sm" onclick="voirDossier('${c.immatricule}')"><i class="fas fa-folder-open"></i></button> <button class="btn ${c.compte_suspendu?'btn-success':'btn-danger'} btn-sm" onclick="toggleSuspensionConducteur('${c.immatricule}')"><i class="fas fa-${c.compte_suspendu?'check':'ban'}"></i></button></td></tr>`).join('');
+        }
+        async function toggleSuspensionConducteur(immatricule) { const c = conducteursData.find(c => c.immatricule === immatricule); if (!confirm(`${c.compte_suspendu?'Réactiver':'Suspendre'} ${c.nom} ?`)) return; await fetchAPI(`/api/admin/conducteur/${immatricule}/suspendre`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suspendu: !c.compte_suspendu }) }); await loadAllData(); renderConducteursTable(); }
+        function voirDossier(immatricule) { const c = conducteursData.find(c => c.immatricule === immatricule); if (!c) return; openModal(`📁 Dossier: ${c.nom}`, `<div class="detail-grid"><div class="detail-item"><label>Immatricule</label><div class="value">${c.immatricule}</div></div><div class="detail-item"><label>Nom</label><div class="value">${c.nom}</div></div><div class="detail-item"><label>Téléphone</label><div class="value">${c.telephone}</div></div><div class="detail-item"><label>Véhicule</label><div class="value">${c.marque_vehicule||''} ${c.modele_vehicule||''}</div></div><div class="detail-item"><label>Courses</label><div class="value">${c.courses||0}</div></div><div class="detail-item"><label>Gains</label><div class="value">${formatMoney(c.gains||0)} KMF</div></div></div>`); }
+        
+        // ==================== CLIENTS ====================
+        async function loadClients() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; await loadAllData(); renderClientsTable(); }
+        function renderClientsTable() {
+            document.getElementById('contentArea').innerHTML = `<div class="search-bar"><input type="text" class="search-input" id="searchClient" placeholder="Rechercher..." onkeyup="filterClients()"></div><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Nom</th><th>Téléphone</th><th>Courses</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="clientsBody"></tbody></table></div>`;
+            filterClients();
+        }
+        function filterClients() {
+            const search = document.getElementById('searchClient')?.value?.toLowerCase() || '';
+            let filtered = clientsData;
+            if (search) filtered = filtered.filter(c => (c.nom||'').toLowerCase().includes(search) || (c.telephone||'').includes(search));
+            document.getElementById('clientsBody').innerHTML = filtered.map(c => `<tr><td>#${c.id}</td><td>${c.nom}</td><td>${c.telephone}</td><td>${c.courses||0}</td><td><span class="badge ${c.compte_suspendu?'badge-danger':'badge-success'}">${c.compte_suspendu?'Suspendu':'Actif'}</span></td><td><button class="btn ${c.compte_suspendu?'btn-success':'btn-danger'} btn-sm" onclick="toggleSuspensionClient(${c.id})"><i class="fas fa-${c.compte_suspendu?'check':'ban'}"></i></button></td></tr>`).join('');
+        }
+        async function toggleSuspensionClient(id) { const c = clientsData.find(c => c.id === id); if (!confirm(`${c.compte_suspendu?'Réactiver':'Suspendre'} ${c.nom} ?`)) return; await fetchAPI(`/api/admin/clients/${id}/toggle_suspendre`, { method: 'POST' }); await loadAllData(); renderClientsTable(); }
+        
+        // ==================== ABONNEMENTS ====================
+        async function loadAbonnements() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; await loadAllData(); renderAbonnementsTable(); }
+        function renderAbonnementsTable() {
+            document.getElementById('contentArea').innerHTML = `<div class="search-bar"><input type="text" class="search-input" id="searchAbonnement" placeholder="Rechercher..." onkeyup="filterAbonnements()"></div><div class="table-wrapper"><table><thead><tr><th>Conducteur</th><th>Forfait</th><th>Taxes dues</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="abonnementsBody"></tbody></table></div>`;
+            filterAbonnements();
+        }
+        function filterAbonnements() {
+            const search = document.getElementById('searchAbonnement')?.value?.toLowerCase() || '';
+            let filtered = abonnementsData;
+            if (search) filtered = filtered.filter(a => (a.immatricule||'').toLowerCase().includes(search) || (a.nom||'').toLowerCase().includes(search));
+            document.getElementById('abonnementsBody').innerHTML = filtered.map(a => `<tr><td>${a.nom} (${a.immatricule})</td><td>${a.abonnement?.courses_restantes || 0}/${a.abonnement?.courses_achetees || 0}</td><td>${formatMoney(a.taxes_cumulees)} KMF</td><td><span class="badge badge-${a.status_color}">${a.status_text}</span></td><td><button class="btn btn-primary btn-sm" onclick="ouvrirRenouvellement('${a.immatricule}')"><i class="fas fa-sync"></i> Renouveler</button></td></tr>`).join('');
+        }
+        async function ouvrirRenouvellement(immatricule) {
+            openModal(`🔄 Renouvellement - ${immatricule}`, `<div class="loading-spinner"><div class="spinner"></div></div>`);
+            const res = await fetchAPI(`/api/admin/conducteur/${immatricule}/renouvellement`);
+            if (!res.success) { document.getElementById('modalBody').innerHTML = '<p class="text-danger">Conducteur non trouvé</p>'; return; }
+            const c = res.conducteur, calc = res.calcul;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-grid"><div class="detail-item"><label>Conducteur</label><div class="value">${c.nom}</div></div><div class="detail-item"><label>Téléphone</label><div class="value">${c.telephone}</div></div><div class="detail-item"><label>Courses effectuées</label><div class="value">${c.courses_effectuees}</div></div><div class="detail-item"><label>Taxes dues</label><div class="value">${formatMoney(calc.taxes_dues)} KMF</div></div></div>
+                <div class="total-card"><label>NOUVEAU FORFAIT</label><div style="margin:10px 0;">📦 ${calc.forfait_courses} courses</div><div style="display:flex;justify-content:center;gap:20px;"><span>Forfait: ${formatMoney(calc.prix_forfait)} KMF</span><span>+</span><span>Taxes: ${formatMoney(calc.taxes_dues)} KMF</span></div><div class="amount">${formatMoney(calc.total_a_payer)} KMF</div></div>
+                <div style="margin-top:20px;"><label>Mode de paiement</label><select id="modePaiement" class="search-input"><option value="Espèces">Espèces</option><option value="Orange Money">Orange Money</option><option value="Mvola">Mvola</option></select></div>
+                <div style="margin-top:10px;"><label>Référence</label><input type="text" id="referencePaiement" class="search-input"></div>
+                <div style="margin-top:15px;"><label><input type="checkbox" id="envoyerWhatsapp" checked> Envoyer reçu WhatsApp</label></div>
+            `;
+            document.getElementById('modalFooter').innerHTML = `<button class="btn btn-outline" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmerRenouvellement(${c.id},'${c.immatricule}',${calc.total_a_payer})"><i class="fas fa-check"></i> Confirmer</button>`;
+        }
+        async function confirmerRenouvellement(id, immatricule, montant) {
+            const mode = document.getElementById('modePaiement').value, ref = document.getElementById('referencePaiement').value, whatsapp = document.getElementById('envoyerWhatsapp').checked;
+            closeModal();
+            const res = await fetchAPI('/api/admin/renouvellement/confirmer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conducteur_id: id, montant, mode_paiement: mode, reference: ref, envoyer_whatsapp: whatsapp }) });
+            if (res.success) { if (res.whatsapp_url) window.open(res.whatsapp_url, '_blank'); alert('✅ Renouvellement confirmé !'); await loadAllData(); renderAbonnementsTable(); }
+            else { alert('Erreur: ' + (res.error || 'Inconnue')); }
+        }
+        
+        // ==================== TAXES ====================
+        async function loadTaxes() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            await loadAllData();
+            const taxes = financesData?.finances?.taxes_courses?.total || 0;
+            document.getElementById('contentArea').innerHTML = `
+                <h2><i class="fas fa-percent"></i> Taxes collectées</h2>
+                <div class="kpi-row"><div class="kpi-card"><div class="kpi-title">Total taxes</div><div class="kpi-value">${formatMoney(taxes)} KMF</div><div class="kpi-trend">${financesData?.finances?.taxes_courses?.nombre_courses || 0} courses taxées</div></div></div>
+                <p style="color: var(--gray);">Les taxes (${configData.pourcentage_taxes?.valeur || 5}%) sont prélevées sur chaque course et payées par les conducteurs lors du renouvellement.</p>
+            `;
+        }
+        
+        // ==================== AMENDES ====================
+        async function loadAmendes() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; await loadAllData(); renderAmendesTable(); }
+        function renderAmendesTable() {
+            document.getElementById('contentArea').innerHTML = `<div class="tabs-header"><button class="tab-btn active" onclick="filterAmendes('en_attente')">En attente</button><button class="tab-btn" onclick="filterAmendes('payee')">Payées</button><button class="tab-btn" onclick="filterAmendes('annulee')">Annulées</button></div><div class="table-wrapper"><table><thead><tr><th>ID</th><th>Type</th><th>Montant</th><th>Raison</th><th>Date</th><th>Actions</th></tr></thead><tbody id="amendesBody"></tbody></table></div>`;
+            filterAmendes('en_attente');
+        }
+        function filterAmendes(statut) {
+            let filtered = amendesData.filter(a => a.statut === statut);
+            document.getElementById('amendesBody').innerHTML = filtered.map(a => `<tr><td>#${a.id}</td><td>${a.utilisateur_type}</td><td>${formatMoney(a.montant)} KMF</td><td>${a.raison?.substring(0, 40) || 'N/A'}</td><td>${new Date(a.date_amende).toLocaleDateString('fr-FR')}</td><td>${a.statut==='en_attente'?`<button class="btn btn-success btn-sm" onclick="payerAmende(${a.id})"><i class="fas fa-check"></i></button><button class="btn btn-danger btn-sm" onclick="annulerAmende(${a.id})"><i class="fas fa-times"></i></button>`:''}</td></tr>`).join('');
+        }
+        async function payerAmende(id) { if(!confirm('Confirmer?'))return; await fetchAPI(`/api/amendes/${id}/payer`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token_paiement:'PAY_'+Date.now()})}); await loadAllData(); filterAmendes('en_attente'); }
+        async function annulerAmende(id) { const r=prompt('Raison:'); if(!r)return; await fetchAPI(`/api/amendes/${id}/annuler`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raison:r})}); await loadAllData(); filterAmendes('en_attente'); }
+        
+        // ==================== VÉRIFICATIONS ====================
+        async function loadVerifications() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; await loadAllData(); renderVerificationsTable(); }
+        function renderVerificationsTable() {
+            document.getElementById('contentArea').innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Immatricule</th><th>Nom</th><th>Téléphone</th><th>Catégorie</th><th>Action</th></tr></thead><tbody>${verificationsData.map(v => `<tr><td>${v.immatricule}</td><td>${v.nom}</td><td>${v.telephone}</td><td>${v.categorie}</td><td><button class="btn btn-success btn-sm" onclick="approuverVerification(${v.id})"><i class="fas fa-check"></i> Approuver</button> <button class="btn btn-warning btn-sm" onclick="window.open('https://wa.me/${v.telephone?.replace(/\D/g,'')}?text=Vérification%20ZAHEL%20pour%20${v.immatricule}','_blank')"><i class="fab fa-whatsapp"></i></button></td></tr>`).join('')}</tbody></table></div>`;
+        }
+        async function approuverVerification(id) { await fetchAPI(`/api/admin/verifications/${id}/activer`, { method: 'POST' }); await loadAllData(); renderVerificationsTable(); }
+        
+        // ==================== AUDIT ====================
+        async function loadAudit() { document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`; const res = await fetchAPI('/api/admin/audit-logs'); const logs = res.logs||[]; document.getElementById('contentArea').innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Date</th><th>Action</th><th>Détails</th></tr></thead><tbody>${logs.map(l => `<tr><td>${new Date(l.timestamp).toLocaleString()}</td><td><span class="badge badge-info">${l.action}</span></td><td>${l.details}</td></tr>`).join('')}</tbody></table></div>`; }
+        
+        // ==================== CONFIGURATION ====================
+        async function loadConfig() {
+            document.getElementById('contentArea').innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+            const res = await fetchAPI('/api/admin/config');
+            if (res.success) {
+                configData = res.config;
+                document.getElementById('contentArea').innerHTML = `<h2>Configuration</h2><div class="detail-grid"><div class="detail-item"><label>Forfait courses</label><input type="number" id="cfgForfait" value="${configData.forfait_courses?.valeur||50}" class="search-input"></div><div class="detail-item"><label>Prix forfait</label><input type="number" id="cfgPrixForfait" value="${configData.prix_forfait?.valeur||1000}" class="search-input"></div><div class="detail-item"><label>Taxes (%)</label><input type="number" id="cfgTaxes" value="${configData.pourcentage_taxes?.valeur||5}" class="search-input"></div><div class="detail-item"><label>WhatsApp</label><input type="text" id="cfgWhatsapp" value="${configData.whatsapp_agence?.valeur||'2693608657'}" class="search-input"></div></div><button class="btn btn-primary" onclick="saveConfig()">Sauvegarder</button>`;
+            }
+        }
+        async function saveConfig() {
+            const data = { forfait_courses: document.getElementById('cfgForfait').value, prix_forfait: document.getElementById('cfgPrixForfait').value, pourcentage_taxes: document.getElementById('cfgTaxes').value, whatsapp_agence: document.getElementById('cfgWhatsapp').value };
+            await fetchAPI('/api/admin/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            alert('✅ Configuration sauvegardée');
+        }
+        
+        // ==================== UTILITAIRES ====================
+        function openModal(title, body) { document.getElementById('modalTitle').innerHTML=title; document.getElementById('modalBody').innerHTML=body; document.getElementById('modalFooter').innerHTML='<button class="btn btn-outline" onclick="closeModal()">Fermer</button>'; document.getElementById('modalOverlay').classList.add('active'); }
+        function closeModal(e) { if(!e||e.target===document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('active'); }
+        function exportConducteurs() { const ws = XLSX.utils.json_to_sheet(conducteursData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Conducteurs'); XLSX.writeFile(wb, `conducteurs_${new Date().toISOString().slice(0,10)}.xlsx`); }
+        function exportDashboardPDF() { alert('Export PDF - Fonctionnalité à venir'); }
+        function exportDashboardExcel() { 
+            const data = [
+                ['Indicateur', 'Valeur'],
+                ['Revenu Total ZAHEL', financesData?.finances?.total_zahel || 0],
+                ['Forfaits', financesData?.finances?.forfaits?.total || 0],
+                ['Taxes', financesData?.finances?.taxes_courses?.total || 0],
+                ['Amendes payées', financesData?.finances?.amendes?.payees || 0]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Dashboard');
+            XLSX.writeFile(wb, `dashboard_zahel_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
     </script>
 </body>
 </html>

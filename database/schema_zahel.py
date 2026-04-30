@@ -240,6 +240,86 @@ class DatabaseZahel:
         )
         ''')
         
+        # === TABLE : ADRESSES FRÉQUENTES ===
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS adresses_frequentes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            nom TEXT NOT NULL,
+            adresse TEXT NOT NULL,
+            latitude REAL,
+            longitude REAL,
+            type TEXT DEFAULT 'personnel',
+            est_principale BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )
+        ''')
+        
+        # === TABLE : ABONNEMENTS ===
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS abonnements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conducteur_id INTEGER NOT NULL UNIQUE,
+            courses_achetees INTEGER DEFAULT 50,
+            courses_restantes INTEGER DEFAULT 50,
+            date_achat DATETIME DEFAULT CURRENT_TIMESTAMP,
+            date_expiration DATETIME,
+            actif BOOLEAN DEFAULT 1,
+            FOREIGN KEY (conducteur_id) REFERENCES conducteurs(id) ON DELETE CASCADE
+        )
+        ''')
+        
+        # === TABLE : AMENDES CHAUFFEUR ===
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS amendes_chauffeur (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amende_id INTEGER NOT NULL,
+            conducteur_id INTEGER NOT NULL,
+            client_id INTEGER NOT NULL,
+            course_code TEXT NOT NULL,
+            montant DECIMAL(10,2) NOT NULL,
+            date_collecte DATETIME DEFAULT CURRENT_TIMESTAMP,
+            statut TEXT DEFAULT 'a_verser',
+            date_versement DATETIME,
+            FOREIGN KEY (amende_id) REFERENCES amendes(id),
+            FOREIGN KEY (conducteur_id) REFERENCES conducteurs(id),
+            FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+        ''')
+        
+        # === TABLE : NOTIFICATIONS CONDUCTEUR ===
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notifications_conducteur (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conducteur_id INTEGER NOT NULL,
+            course_code TEXT,
+            type_notification TEXT NOT NULL,
+            message TEXT NOT NULL,
+            lue BOOLEAN DEFAULT 0,
+            date_lecture DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conducteur_id) REFERENCES conducteurs(id) ON DELETE CASCADE
+        )
+        ''')
+        
+        # === TABLE : HISTORIQUE CONDUCTEUR ===
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS historique_conducteur (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conducteur_id INTEGER NOT NULL,
+            mois TEXT NOT NULL,
+            courses_effectuees INTEGER DEFAULT 0,
+            gains_totaux DECIMAL(10,2) DEFAULT 0,
+            taxes_payees DECIMAL(10,2) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conducteur_id) REFERENCES conducteurs(id) ON DELETE CASCADE
+        )
+        ''')
+        
+        # Créer les index pour optimiser les performances
+        self.create_indexes(cursor)
+        
         # Insérer les configurations par défaut
         self.insert_default_configs(cursor)
         
@@ -293,6 +373,35 @@ class DatabaseZahel:
         cursor.execute('''
             INSERT OR IGNORE INTO statistiques (id) VALUES (1)
         ''')
+    
+    def create_indexes(self, cursor):
+        """Créer les index pour optimiser les performances"""
+        # Index pour les conducteurs
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_conducteurs_disponible ON conducteurs(disponible, en_course)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_conducteurs_categorie ON conducteurs(categorie_vehicule)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_conducteurs_position ON conducteurs(latitude, longitude)')
+        
+        # Index pour les courses
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_statut ON courses(statut)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_client ON courses(client_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_conducteur ON courses(conducteur_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_date ON courses(date_demande)')
+        
+        # Index pour les clients
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_clients_telephone ON clients(telephone)')
+        
+        # Index pour les amendes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_amendes_statut ON amendes(statut)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_amendes_utilisateur ON amendes(utilisateur_type, utilisateur_id)')
+        
+        # Index pour les abonnements
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_abonnements_conducteur ON abonnements(conducteur_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_abonnements_actif ON abonnements(actif)')
+        
+        # Index pour les notifications
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_conducteur ON notifications_conducteur(conducteur_id, lue)')
+        
+        print("✅ Index créés pour optimiser les performances")
     
     def get_config(self, cle):
         """Récupérer une configuration"""

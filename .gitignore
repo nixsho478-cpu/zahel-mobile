@@ -4,3 +4,35 @@ __pycache__/
 session.json
 .DS_Store
 *.log
+
+# Buildozer and Python environments
+.buildozer/
+build/
+bin/
+.venv/
+venv/
+env_zahel/
+zahel-env/
+
+# Cache directories
+**/cache/
+**/cache/*
+**/cache/osm_tiles_comores/
+**/cache/mapbox_tiles/
+**/cache/mapbox_map.html
+
+# Backup and archive folders
+_ARCHIVES/
+_SAUVEGARDE_20260414/
+
+# IDE and OS files
+.vscode/
+.idea/
+Thumbs.db
+
+# Avoid committing generated / temporary files
+*.pem
+*.keystore
+*.zip
+*.apk
+*.p12

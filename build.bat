@@ -3,7 +3,8 @@ echo ========================================
 echo BUILD ZAHEL POUR ANDROID
 echo ========================================
 
-set BUILD_PATH=C:\Users\USER\AppData\Local\Programs\Python\Python313\Scripts\buildozer.exe
+REM ⭐ CORRECTION : Chemin vers buildozer.exe dans l'environnement virtuel
+set BUILD_PATH=C:\Users\USER\Desktop\zahel\env_zahel\Scripts\buildozer.exe
 set PROJECT_DIR=C:\Users\USER\Desktop\zahel
 
 cd /d "%PROJECT_DIR%"

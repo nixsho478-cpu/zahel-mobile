@@ -5,12 +5,20 @@ import json
 class APIClient:
     """Client API pour ZAHEL - Gère conducteur ET client"""
     
-    def __init__(self, base_url="http://localhost:5001"):
-        self.base_url = base_url
+    def __init__(self, base_url=None):
+        # ⭐ UTILISER LA CONFIGURATION SI BASE_URL NON FOURNIE
+        if base_url is None:
+            from config.config import Config
+            self.base_url = Config.API_BASE_URL
+        else:
+            self.base_url = base_url
+            
         self.token = None
         self.user_type = None  # 'client' ou 'conducteur'
         self.session = requests.Session()
-        self.session.timeout = 10
+        self.session.timeout = 60
+        
+        print(f"🔌 API Client initialisé avec URL: {self.base_url}")
         
     # ========== MÉTHODES COMMUNES ==========
     
@@ -50,7 +58,14 @@ class APIClient:
                     self.token = data.get('token', immatricule)
                     self.user_type = 'conducteur'
                 return data
-            return {"success": False, "error": f"HTTP {response.status_code}"}
+            else:
+                # ⭐⭐⭐ EXTRAIRE LE MESSAGE D'ERREUR DU JSON ⭐⭐⭐
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('error', f"HTTP {response.status_code}")
+                except:
+                    error_msg = f"HTTP {response.status_code}"
+                return {"success": False, "error": error_msg}
         except Exception as e:
             return {"success": False, "error": str(e)}
     
@@ -83,16 +98,20 @@ class APIClient:
             return {"success": False, "error": str(e)}
     
     def accept_course(self, course_code):
-        """Accepter une course"""
+        """Accepter une course et retourner les coordonnées"""
         if not self.token:
             return {"success": False, "error": "Non authentifié"}
-        
+    
         try:
             response = self.session.post(
                 f"{self.base_url}/api/courses/{course_code}/accepter",
                 headers={"Authorization": self.token}
             )
-            return response.json() if response.status_code == 200 else {"success": False, "error": f"HTTP {response.status_code}"}
+        
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"success": False, "error": f"HTTP {response.status_code}"}
         except Exception as e:
             return {"success": False, "error": str(e)}
     
@@ -104,7 +123,8 @@ class APIClient:
         try:
             response = self.session.post(
                 f"{self.base_url}/api/courses/{course_code}/commencer",
-                headers={"Authorization": self.token}
+                headers={"Authorization": self.token},
+                timeout=30
             )
             return response.json() if response.status_code == 200 else {"success": False, "error": f"HTTP {response.status_code}"}
         except Exception as e:
@@ -118,7 +138,8 @@ class APIClient:
         try:
             response = self.session.post(
                 f"{self.base_url}/api/courses/{course_code}/terminer",
-                headers={"Authorization": self.token}
+                headers={"Authorization": self.token},
+                timeout=30
             )
             return response.json() if response.status_code == 200 else {"success": False, "error": f"HTTP {response.status_code}"}
         except Exception as e:
@@ -146,7 +167,8 @@ class APIClient:
         try:
             response = self.session.post(
                 f"{self.base_url}/api/client/login",
-                json={"telephone": telephone, "password": password}
+                json={"telephone": telephone, "password": password},
+                timeout=30
             )
             if response.status_code == 200:
                 data = response.json()
@@ -390,35 +412,7 @@ class APIClient:
                 return {'success': False, 'error': f'HTTP {response.status_code}'}
             
         except Exception as e:
-            return {'success': False, 'error': str(e)}    
-        
-    def accepter_course(self, code_course, token):
-        """Accepter une course (pour conducteur)"""
-        try:
-            url = f"{self.base_url}/api/courses/{code_course}/accepter"
-            headers = {
-                'Authorization': str(token),
-                'Content-Type': 'application/json'
-            }
-        
-            print(f"🔍 Appel API: POST {url}")
-            print(f"🔍 Token: {token}")
-        
-            response = self.session.post(url, headers=headers, timeout=10)
-        
-            print(f"🔍 Réponse API: {response.status_code}")
-        
-            if response.status_code == 200:
-                result = response.json()
-                print(f"✅ API acceptation: {result}")
-                return result
-            else:
-                print(f"❌ Erreur API: {response.status_code} - {response.text}")
-                return {'success': False, 'error': f'Status {response.status_code}'}
-            
-        except Exception as e:
-            print(f"❌ Exception API: {e}")
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(e)}        
 
     def get_course_status(self, course_code):
         """
@@ -746,7 +740,7 @@ class APIClient:
 
     def marquer_toutes_notifications_lues(self):
         """Marquer toutes les notifications comme lues en UN SEUL appel"""
-        if not self.token:
+        if not self.token: 
             return {'success': False, 'error': 'Non authentifié'}
     
         try:
@@ -837,3 +831,237 @@ class APIClient:
             return response.json() if response.status_code == 200 else {'success': False}
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    def verifier_statut_conducteur(self):
+        """Vérifier le statut du conducteur et libérer si nécessaire"""
+        if not self.token:
+            return {'success': False, 'error': 'Non authentifié'}
+    
+        try:
+            response = self.session.get(
+                f"{self.base_url}/api/conducteur/verifier_statut",
+                headers=self._get_headers(),
+                timeout=5
+            )
+        
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {'success': False, 'error': f'HTTP {response.status_code}'}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def send_location_from_intent(self, lat, lng, source='whatsapp'):
+        """Envoyer une localisation reçue d'un intent"""
+        if not self.token:
+            return {'success': False, 'error': 'Non authentifié'}
+    
+        try:
+            response = self.session.post(
+                f"{self.base_url}/api/client/location",
+                headers={'Authorization': self.token},
+                json={'lat': lat, 'lng': lng, 'source': source},
+                timeout=5
+            )
+            return response.json() if response.status_code == 200 else {'success': False}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    # ========== MAPBOX MÉTHODES ==========
+    
+    def geocode_address(self, address):
+        """
+        Convertir une adresse en coordonnées avec Mapbox
+        Exemple: geocode_address("Moroni Centre")
+        Retourne: {'success': True, 'latitude': -11.698, 'longitude': 43.256, 'place_name': '...'}
+        """
+        try:
+            from urllib.parse import quote
+            import requests
+            
+            # Importer la configuration Mapbox
+            import sys
+            import os.path as osp
+            sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
+            from config.mapbox_config import MapboxConfig
+            
+            # Encoder l'adresse pour l'URL
+            encoded_address = quote(address)
+            url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{encoded_address}.json"
+            params = {
+                'access_token': MapboxConfig.ACCESS_TOKEN,
+                'limit': 1,
+                'country': 'km'  # Limiter aux Comores
+            }
+            
+            print(f"📍 Géocodage: {address}")
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            if data.get('features'):
+                feature = data['features'][0]
+                coords = feature['geometry']['coordinates']
+                return {
+                    'success': True,
+                    'latitude': coords[1],
+                    'longitude': coords[0],
+                    'place_name': feature['place_name'],
+                    'address': feature.get('text', address)
+                }
+            return {'success': False, 'error': 'Adresse non trouvée'}
+            
+        except Exception as e:
+            print(f"❌ Erreur geocode_address: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def reverse_geocode(self, lat, lng):
+        """
+        Convertir des coordonnées en adresse avec Nominatim (gratuit + cache)
+        Exemple: reverse_geocode(-11.698, 43.256)
+        Retourne: {'success': True, 'address': 'Moroni, Comores'}
+        """
+        try:
+            import requests
+        
+            # ⭐⭐⭐ UTILISER LE PROXY NOMINATIM (PORT 5002) ⭐⭐⭐
+            url = f"http://zahel-comores.com:5002/reverse"
+            params = {
+                'lat': lat,
+                'lng': lng
+            }
+        
+            print(f"📍 Reverse géocodage (Nominatim): ({lat:.6f}, {lng:.6f})")
+            response = requests.get(url, params=params, timeout=10)
+        
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('display_name'):
+                    # Prendre la première partie de l'adresse (plus lisible)
+                    address_parts = data['display_name'].split(',')
+                    short_address = address_parts[0].strip() if address_parts else data['display_name']
+                
+                    return {
+                        'success': True,
+                        'address': short_address,
+                        'full_address': data['display_name'],
+                        'coordinates': (lat, lng)
+                    }
+        
+            # Fallback: utiliser Mapbox si Nominatim échoue
+            print(f"⚠️ Nominatim échoué, fallback Mapbox")
+            import sys
+            import os.path as osp
+            sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
+            from config.mapbox_config import MapboxConfig
+        
+            url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{lng},{lat}.json"
+            params = {
+                'access_token': MapboxConfig.ACCESS_TOKEN,
+                'limit': 1
+            }
+        
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+        
+            if data.get('features'):
+                feature = data['features'][0]
+                return {
+                    'success': True,
+                    'address': feature['place_name'],
+                    'coordinates': (lat, lng)
+                }
+        
+            # Fallback ultime
+            return {
+                'success': True, 
+                'address': f"{lat:.4f}, {lng:.4f}",
+                'coordinates': (lat, lng)
+            }
+        
+        except Exception as e:
+            print(f"❌ Erreur reverse_geocode: {e}")
+            return {
+                'success': True,  # On retourne quand même quelque chose
+                'address': f"{lat:.4f}, {lng:.4f}",
+                'coordinates': (lat, lng)
+            }
+    
+    def get_route(self, start_lat, start_lng, end_lat, end_lng):
+        """Calculer un itinéraire avec Mapbox Directions API"""
+        try:
+            import requests
+            from config.mapbox_config import MapboxConfig
+        
+            # Format pour Mapbox: lng,lat
+            start_coords = f"{start_lng},{start_lat}"
+            end_coords = f"{end_lng},{end_lat}"
+        
+            url = f"https://api.mapbox.com/directions/v5/mapbox/driving/{start_coords};{end_coords}"
+            params = {
+                'access_token': MapboxConfig.ACCESS_TOKEN,
+                'geometries': 'geojson',
+                'overview': 'full',
+                'steps': 'true'
+            }
+        
+            print(f"🗺️ Appel Directions API: {start_lat},{start_lng} → {end_lat},{end_lng}")
+        
+            # ⭐ AJOUTER UN TIMEOUT ET GÉRER LES ERREURS SSL
+            response = requests.get(url, params=params, timeout=15, verify=True)
+            print(f"🗺️ Status: {response.status_code}")
+        
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('routes'):
+                    route = data['routes'][0]
+                    return {
+                        'success': True,
+                        'distance_km': round(route['distance'] / 1000, 1),
+                        'duration_min': round(route['duration'] / 60, 1),
+                        'geometry': route['geometry'],
+                        'instructions': [step['maneuver']['instruction'] for step in route['legs'][0]['steps']]
+                    }
+            elif response.status_code == 422:
+                print("⚠️ Erreur 422: Coordonnées invalides ou trop proches")
+            elif response.status_code == 429:
+                print("⚠️ Erreur 429: Trop de requêtes, attendez un moment")
+            else:
+                print(f"⚠️ Erreur HTTP {response.status_code}: {response.text[:200]}")
+        
+            return {'success': False, 'error': f'HTTP {response.status_code}'}
+        
+        except requests.exceptions.SSLError as e:
+            print(f"⚠️ Erreur SSL (temporaire): {e}")
+            print("🔄 Utilisation du fallback local (ligne droite)")
+            return {'success': False, 'error': 'SSL Error - fallback utilisé'}
+        except requests.exceptions.Timeout:
+            print("⚠️ Timeout API Mapbox")
+            return {'success': False, 'error': 'Timeout'}
+        except Exception as e:
+            print(f"❌ Erreur get_route: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def update_driver_position(self, lat, lng):
+        """Mettre à jour la position du conducteur avec retry"""
+        if not self.token:
+            return {'success': False, 'error': 'Non authentifié'}
+
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/api/conducteur/position",
+                    headers={'Authorization': self.token},
+                    json={'latitude': lat, 'longitude': lng},
+                    timeout=8
+                )
+                print(f"📍 Position envoyée: ({lat:.6f}, {lng:.6f}) - Status: {response.status_code}")
+                return response.json() if response.status_code == 200 else {'success': False}
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"⚠️ Échec envoi position après {max_retries} tentatives: {e}")
+                    return {'success': False, 'error': str(e)}
+                else:
+                    import time
+                    time.sleep(1)  # Attendre 1s avant de réessayer

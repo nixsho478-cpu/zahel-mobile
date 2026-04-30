@@ -1,0 +1,72 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          git \
+          python3-dev \
+          openjdk-17-jdk \
+          unzip \
+          zlib1g-dev \
+          libncurses5 \
+          libstdc++6 \
+          libffi-dev \
+          libssl-dev
+
+    - name: Install Buildozer
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install buildozer
+
+    - name: Configure Buildozer
+      run: |
+        # Create buildozer init if needed
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
+
+    - name: Build Android APK (Debug)
+      run: |
+        buildozer android debug
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: zahel-debug-apk
+        path: bin/*.apk
+
+    - name: Build Android APK (Release)
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        # For release builds, you need to set up keystore
+        # buildozer android release
+        echo "Release build requires keystore setup"
+
+    - name: Upload Release APK
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: zahel-release-apk
+        path: bin/*.apk

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ZAHEL - Choisissez votre trajet</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css">
+    <style>
+        * { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; overflow: hidden; height: 100vh; font-family: Arial, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 100px; width: 100%; }
+        
+        .control-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: white;
+            border-top: 3px solid #4285F4;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            z-index: 1000;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .info-item {
+            flex: 1;
+            padding: 6px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 0 5px;
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .info-depart { border-left: 3px solid #4285F4; }
+        .info-arrivee { border-left: 3px solid #E53935; }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-depart { background: #4285F4; color: white; }
+        .btn-arrivee { background: #E53935; color: white; }
+        .btn-confirm { background: #34A853; color: white; }
+        .btn-confirm:disabled { background: #ccc; }
+        
+        .status-bar {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 25px;
+            font-size: 12px;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        
+        /* Style pour le contrôle de recherche */
+        .mapboxgl-ctrl-geocoder {
+            width: 280px;
+            top: 10px;
+            left: 10px;
+            position: absolute;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div id="status-bar" class="status-bar">📍 Choisissez votre point de départ</div> 
+    
+    <div class="control-bar">
+        <div class="info-row">
+            <div class="info-item info-depart">📍 DÉPART: <span id="depart-text">---</span></div>
+            <div class="info-item info-arrivee">🏁 ARRIVÉE: <span id="arrivee-text">---</span></div>
+        </div>
+        
+        <div class="button-row">
+            <button class="btn-depart" id="btn-depart" onclick="setMode('depart')">📍 DÉPART</button>
+            <button class="btn-arrivee" id="btn-arrivee" onclick="setMode('arrivee')">🏁 ARRIVÉE</button>
+        </div>
+        
+        <div class="button-row">
+            <button class="btn-confirm" id="btn-confirm" onclick="confirmSelection()" disabled>✅ CONFIRMER LE TRAJET</button>
+        </div>
+    </div>
+
+    <script>
+        // Le token sera remplacé par Python
+        const accessToken = 'MAPBOX_TOKEN_PLACEHOLDER';
+
+        let map;
+        let markers = [];
+        let selectionMode = 'depart';
+        let departCoords = null;
+        let arriveeCoords = null;
+        let currentRoute = null;
+        let searchBox;
+
+        function initMap() {
+            mapboxgl.accessToken = accessToken;
+
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v12',
+                center: [43.2560, -11.6980], // Moroni
+                zoom: 13
+            });
+
+            map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+            const geolocate = new mapboxgl.GeolocateControl({
+                positionOptions: { enableHighAccuracy: true },
+                trackUserLocation: true,
+                showUserLocation: true
+            });
+            map.addControl(geolocate, 'top-right');
+
+            // --- CONFIGURATION SEARCH BOX UBER-LIKE (COMORES UNIQUEMENT) ---
+            searchBox = new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken,
+                mapboxgl: mapboxgl,
+                marker: false,
+                placeholder: '🔍 Rechercher (Ex: Hôpital, École...)',
+                
+                // 1. BLOCAGE STRICT SUR LES COMORES POUR MAPBOX
+                countries: 'km', 
+                bbox: [43.0, -12.5, 44.5, -11.0], // Boîte virtuelle autour des Comores
+                minLength: 3,
+                limit: 8,
+                
+                // 2. INTÉGRATION OSM/NOMINATIM POUR AVOIR LA PRÉCISION D'OSMAND
+                externalGeocoder: function(searchInput) {
+                    const query = encodeURIComponent(searchInput);
+                    // ⭐⭐⭐ UTILISER LE PROXY LOCAL ⭐⭐⭐
+                    const url = `http://localhost:5002/search?q=${query}&country=km&limit=8`;
+
+                    console.log('🔍 Recherche via proxy:', searchInput);
+    
+                    return fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('✅ Proxy a retourné', data.length, 'résultats');
+                            // Les données sont déjà formatées par le proxy !
+                            return data;
+                        })
+                        .catch(err => {
+                            console.error("Erreur proxy:", err);
+                            // FALLBACK: appel direct à Nominatim si proxy hors ligne
+                            const fallbackUrl = `https://nominatim.openstreetmap.org/search?q=${query}&countrycodes=km&format=json&limit=8`;
+                            return fetch(fallbackUrl)
+                                .then(response => response.json())
+                                .then(data => {
+                                    return data.map(item => ({
+                                        id: 'osm-' + item.place_id,
+                                        type: 'Feature',
+                                        geometry: { type: 'Point', coordinates: [item.lon, item.lat] },
+                                        place_name: item.display_name,
+                                        text: item.name || item.display_name.split(',')[0],
+                                        center: [item.lon, item.lat],
+                                        place_type: ['poi']
+                                    }));
+                                });
+                        });
+                }
+            });
+
+            map.addControl(searchBox, 'top-left');
+
+            // Quand l'utilisateur clique sur un résultat dans la liste
+            searchBox.on('result', function(e) {
+                // e.result contient maintenant nos données OSM formatées parfaitement
+                const lng = e.result.center[0];
+                const lat = e.result.center[1];
+                const placeName = e.result.text || e.result.place_name; // On prend le nom court en priorité
+        
+                selectPoint(lat, lng, selectionMode, placeName);
+            });
+
+            // Quand l'utilisateur clique n'importe où sur la carte
+            map.on('click', function(e) {
+                const lng = e.lngLat.lng;
+                const lat = e.lngLat.lat;
+                selectPoint(lat, lng, selectionMode, "Point sur la carte");
+            });
+        }
+
+        function setMode(mode) {
+            selectionMode = mode;
+            const bar = document.getElementById('status-bar');
+            if (mode === 'depart') {
+                bar.innerHTML = '📍 Mode DÉPART - Cherchez un lieu précis';
+                bar.style.background = 'rgba(66, 133, 244, 0.9)';
+                searchBox.setPlaceholder('🔍 Lieu de départ (ex: Volo Volo)');
+            } else {
+                bar.innerHTML = '🏁 Mode ARRIVÉE - Où allez-vous ?';
+                bar.style.background = 'rgba(229, 57, 53, 0.9)';
+                searchBox.setPlaceholder('🔍 Destination (ex: Aéroport)');
+            }
+        }
+
+        function createMarkerElement(color) {
+            const el = document.createElement('div');
+            el.className = 'marker';
+            el.style.background = color;
+            return el;
+        }
+
+        function selectPoint(lat, lng, type, placeName) {
+            if (type === 'depart' && markers[0]) markers[0].remove();
+            if (type === 'arrivee' && markers[1]) markers[1].remove();
+    
+            const color = type === 'depart' ? '#4285F4' : '#E53935';
+            const markerEl = createMarkerElement(color);
+            const marker = new mapboxgl.Marker(markerEl).setLngLat([lng, lat]).addTo(map);
+    
+            if (type === 'depart') {
+                departCoords = { lat: lat, lng: lng };
+                markers[0] = marker;
+                document.getElementById('depart-text').innerHTML = placeName.substring(0, 25) + (placeName.length > 25 ? "..." : "");
+                setMode('arrivee');
+            } else {
+                arriveeCoords = { lat: lat, lng: lng };
+                markers[1] = marker;
+                document.getElementById('arrivee-text').innerHTML = placeName.substring(0, 25) + (placeName.length > 25 ? "..." : "");
+                document.getElementById('btn-confirm').disabled = false;
+                drawRoute();
+            }
+        }
+        
+        function drawRoute() {
+            if (!departCoords || !arriveeCoords) return;
+            
+            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${departCoords.lng},${departCoords.lat};${arriveeCoords.lng},${arriveeCoords.lat}?geometries=geojson&access_token=${accessToken}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const coordinates = route.geometry.coordinates;
+                        
+                        if (currentRoute) {
+                            if (map.getLayer('route')) map.removeLayer('route');
+                            if (map.getSource('route')) map.removeSource('route');
+                        }
+                        
+                        map.addSource('route', {
+                            type: 'geojson',
+                            data: {
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'LineString',
+                                    coordinates: coordinates
+                                }
+                            }
+                        });
+                        
+                        map.addLayer({
+                            id: 'route',
+                            type: 'line',
+                            source: 'route',
+                            paint: {
+                                'line-color': '#4285F4',
+                                'line-width': 4,
+                                'line-opacity': 0.9
+                            }
+                        });
+                        
+                        currentRoute = coordinates;
+                        
+                        const bounds = coordinates.reduce((bounds, coord) => {
+                            return bounds.extend(coord);
+                        }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+                        map.fitBounds(bounds, { padding: 50 });
+                        
+                        const distance = (route.distance / 1000).toFixed(1);
+                        const duration = Math.round(route.duration / 60);
+                        document.getElementById('status-bar').innerHTML = `🛣️ Distance: ${distance} km | Durée: ${duration} min`;
+                    }
+                })
+                .catch(e => console.error('Erreur:', e));
+        }
+        
+        function confirmSelection() {
+            if (departCoords && arriveeCoords) {
+                fetch('/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        depart: departCoords,
+                        arrivee: arriveeCoords
+                    })
+                }).then(() => {
+                    window.location.href = 'close://confirm';
+                }).catch(e => console.log(e));
+            }
+        }
+        
+        window.onload = initMap;
+    </script>
+</body>
+</html>

@@ -1,93 +1,121 @@
 # liberer_conducteur.py
 import sqlite3
-import datetime
+import os
 
-print("=" * 50)
-print("🔧 LIBÉRATION DU CONDUCTEUR ZH-327KYM")
-print("=" * 50)
+print("=" * 60)
+print("🔓 LIBÉRATION DU CONDUCTEUR")
+print("=" * 60)
 
-conn = sqlite3.connect('database/zahel_secure.db')
-cursor = conn.cursor()
+# Chemin vers la base de données
+db_path = r"C:\Users\USER\Desktop\zahel\backend\zahel_secure.db"
 
-# 1. Trouver le conducteur
-cursor.execute('SELECT id, nom FROM conducteurs WHERE immatricule = "ZH-327KYM"')
-conducteur = cursor.fetchone()
+# Vérifier que le fichier existe
+if not os.path.exists(db_path):
+    print(f"❌ Base de données non trouvée: {db_path}")
+    print("   Recherche d'autres emplacements...")
+    
+    # Autres emplacements possibles
+    alternatives = [
+        r"C:\Users\USER\Desktop\zahel\database\zahel_secure.db",
+        r"C:\Users\USER\Desktop\zahel\zahel_secure.db"
+    ]
+    
+    for alt in alternatives:
+        if os.path.exists(alt):
+            db_path = alt
+            print(f"✅ Trouvée: {db_path}")
+            break
+    else:
+        print("❌ Aucune base de données trouvée")
+        exit(1)
 
-if not conducteur:
-    print("❌ Conducteur ZH-327KYM non trouvé")
-    exit()
-
-conducteur_id, nom = conducteur
-print(f"✅ Conducteur trouvé: {nom} (ID: {conducteur_id})")
-
-# 2. Vérifier son état actuel
-cursor.execute('SELECT disponible, en_course FROM conducteurs WHERE id = ?', (conducteur_id,))
-disponible, en_course = cursor.fetchone()
-print(f"📊 État actuel:")
-print(f"  • Disponible: {'❌ NON' if disponible == 0 else '✅ OUI'}")
-print(f"  • En course: {'❌ OUI' if en_course == 1 else '✅ NON'}")
-
-# 3. Terminer les courses en cours
-cursor.execute('''
-    SELECT id, code_unique, statut 
-    FROM courses 
-    WHERE conducteur_id = ? 
-    AND statut IN ('en_cours', 'acceptee')
-''', (conducteur_id,))
-
-courses = cursor.fetchall()
-print(f"\n📦 Courses à traiter: {len(courses)}")
-
-if courses:
-    for course_id, code, statut in courses:
-        print(f"  • {code} - {statut}")
+try:
+    # Connexion à la base
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    print(f"\n📂 Base de données: {db_path}")
+    print("-" * 60)
+    
+    # 1. Voir l'état actuel
+    print("\n🔍 ÉTAT ACTUEL:")
+    
+    cursor.execute("SELECT immatricule, en_course, disponible FROM conducteurs")
+    conducteurs = cursor.fetchall()
+    
+    for immatricule, en_course, disponible in conducteurs:
+        statut = "🟢 DISPONIBLE" if disponible and not en_course else "🔴 OCCUPÉ"
+        if en_course:
+            statut = "🚗 EN COURSE"
+        elif not disponible:
+            statut = "⏸️ INDISPONIBLE"
+        print(f"   {immatricule}: {statut}")
+    
+    # 2. Voir les courses en cours
+    cursor.execute("""
+        SELECT code_unique, statut, conducteur_id 
+        FROM courses 
+        WHERE statut IN ('en_cours', 'acceptee')
+    """)
+    courses = cursor.fetchall()
+    
+    print("\n🚗 COURSES EN COURS:")
+    if courses:
+        for code, statut, cond_id in courses:
+            print(f"   {code}: {statut} (conducteur_id: {cond_id})")
+    else:
+        print("   Aucune course en cours")
+    
+    # 3. Libérer le conducteur ZH-952XKW
+    print("\n🔓 LIBÉRATION...")
+    
+    # Récupérer l'ID du conducteur
+    cursor.execute("SELECT id FROM conducteurs WHERE immatricule = 'ZH-952XKW'")
+    result = cursor.fetchone()
+    
+    if result:
+        conducteur_id = result[0]
+        print(f"✅ Conducteur trouvé: ID {conducteur_id}")
         
-        if statut == 'en_cours':
-            # Terminer la course
-            maintenant = datetime.datetime.now().isoformat()
-            cursor.execute('''
-                UPDATE courses 
-                SET statut = 'terminee',
-                    date_fin = ?,
-                    paiement_effectue = 1
-                WHERE id = ?
-            ''', (maintenant, course_id))
-            print(f"    ✅ Course terminée")
-        elif statut == 'acceptee':
-            # Annuler l'acceptation
-            cursor.execute('''
-                UPDATE courses 
-                SET statut = 'en_attente',
-                    conducteur_id = NULL,
-                    date_acceptation = NULL
-                WHERE id = ?
-            ''', (course_id,))
-            print(f"    ✅ Acceptation annulée, course remise en attente")
-
-# 4. Libérer le conducteur
-cursor.execute('''
-    UPDATE conducteurs 
-    SET disponible = 1,
-        en_course = 0,
-        updated_at = ?
-    WHERE id = ?
-''', (datetime.datetime.now().isoformat(), conducteur_id))
-
-print(f"\n🔄 Conducteur libéré:")
-print(f"  • Disponible: ✅ OUI")
-print(f"  • En course: ✅ NON")
-
-# 5. Vérifier
-cursor.execute('SELECT disponible, en_course FROM conducteurs WHERE id = ?', (conducteur_id,))
-disponible, en_course = cursor.fetchone()
-print(f"\n📋 VÉRIFICATION:")
-print(f"  • Disponible: {'✅ OUI' if disponible == 1 else '❌ NON'}")
-print(f"  • En course: {'❌ OUI' if en_course == 1 else '✅ NON'}")
-
-conn.commit()
-conn.close()
-
-print("\n" + "=" * 50)
-print("🎯 Conducteur ZH-327KYM est maintenant DISPONIBLE !")
-print("   Relancez l'app Kivy pour voir les courses.")
-input("Appuyez sur ENTREE pour continuer...")
+        # Libérer le conducteur
+        cursor.execute("UPDATE conducteurs SET en_course = 0, disponible = 1 WHERE id = ?", (conducteur_id,))
+        print(f"✅ Conducteur libéré: en_course=0, disponible=1")
+        
+        # Libérer ses courses
+        cursor.execute("""
+            UPDATE courses 
+            SET statut = 'en_recherche', conducteur_id = NULL 
+            WHERE conducteur_id = ? AND statut != 'terminee'
+        """, (conducteur_id,))
+        print(f"✅ Courses libérées: {cursor.rowcount} course(s) remise(s) en recherche")
+        
+        conn.commit()
+    else:
+        print("❌ Conducteur ZH-952XKW non trouvé")
+    
+    # 4. Vérification finale
+    print("\n✅ VÉRIFICATION FINALE:")
+    
+    cursor.execute("SELECT immatricule, en_course, disponible FROM conducteurs")
+    conducteurs = cursor.fetchall()
+    
+    for immatricule, en_course, disponible in conducteurs:
+        if immatricule == 'ZH-952XKW':
+            print(f"   {immatricule}: en_course={en_course}, disponible={disponible} ✅")
+        else:
+            print(f"   {immatricule}: en_course={en_course}, disponible={disponible}")
+    
+    cursor.execute("SELECT COUNT(*) FROM courses WHERE statut IN ('en_cours', 'acceptee')")
+    courses_encours = cursor.fetchone()[0]
+    print(f"\n📊 Courses en cours après libération: {courses_encours}")
+    
+    conn.close()
+    
+    print("\n" + "=" * 60)
+    print("✅ OPÉRATION TERMINÉE - Le conducteur est libéré !")
+    print("=" * 60)
+    
+except Exception as e:
+    print(f"\n❌ Erreur: {e}")
+    import traceback
+    traceback.print_exc()
