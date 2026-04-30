@@ -33,21 +33,6 @@ jobs:
           libncurses6 \
           libstdc++6 \
           libffi-dev \
-          libssl-dev
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          git \
-          python3-dev \
-          openjdk-17-jdk \
-          unzip \
-          zlib1g-dev \
-          libncurses6 \
-          libstdc++6 \
-          libffi-dev \
           libssl-dev \
           autoconf \
           automake \
@@ -60,9 +45,20 @@ jobs:
         python -m pip install cython==0.29.33
         python -m pip install buildozer
 
+    - name: Copy app files to source directory
+      run: |
+        cp zahel_mobile/main.py .
+        cp -r zahel_mobile/config .
+        cp -r zahel_mobile/api .
+        cp -r zahel_mobile/i18n .
+        cp -r zahel_mobile/assets .
+        cp zahel_mobile/*.py .
+        cp zahel_mobile/*.html .
+        cp zahel_mobile/*.json .
+        ls -la
+
     - name: Configure Buildozer
       run: |
-        # Create buildozer init if needed
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
@@ -80,8 +76,6 @@ jobs:
     - name: Build Android APK (Release)
       if: github.event_name == 'workflow_dispatch'
       run: |
-        # For release builds, you need to set up keystore
-        # buildozer android release
         echo "Release build requires keystore setup"
 
     - name: Upload Release APK
