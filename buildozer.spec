@@ -21,7 +21,7 @@ orientation = portrait
 fullscreen = 0
 python.version = 3
 
-requirements = python3,kivy==2.3.0,requests,plyer,pillow,sentry-sdk
+requirements = python3,kivy==2.2.1,requests,plyer,pillow,sentry-sdk
 
 icon.filename = zahel_mobile/assets/icon.png
 
