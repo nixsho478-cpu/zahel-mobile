@@ -30,7 +30,7 @@ jobs:
           openjdk-17-jdk \
           unzip \
           zlib1g-dev \
-          libncurses5 \
+          libncurses6 \
           libstdc++6 \
           libffi-dev \
           libssl-dev
