@@ -49,14 +49,13 @@ jobs:
 
     - name: Build Android APK (Debug)
       run: |
-        cd zahel_mobile
         buildozer android debug
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: zahel-debug-apk
-        path: zahel_mobile/bin/*.apk
+        path: bin/*.apk
 
     - name: Build Android APK (Release)
       if: github.event_name == 'workflow_dispatch'
