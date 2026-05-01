@@ -55,6 +55,9 @@ jobs:
         cp zahel_mobile/*.py .
         cp zahel_mobile/*.html .
         cp zahel_mobile/*.json .
+        rm -f map_selection_screen_backup.py
+        rm -f main_backup.py
+        rm -f api_client.py
         ls -la
 
     - name: Configure Buildozer
