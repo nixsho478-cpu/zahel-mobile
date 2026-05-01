@@ -13,8 +13,8 @@ source.exclude_dirs = __pycache__, zahel_mobile, backend, database, env_zahel
 android.arch = arm64-v8a
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION
 android.minapi = 21
-android.sdk = 31
-android.ndk = 25b
+android.sdk = 34
+android.ndk = 25c
 
 orientation = portrait
 fullscreen = 0
