@@ -60,6 +60,12 @@ jobs:
         rm -f api_client.py
         ls -la
 
+    - name: Clean Gradle cache
+      run: |
+        rm -rf ~/.gradle/caches/
+        rm -rf .buildozer/android/platform/build-arm64-v8a/dists/
+        echo "Cache Gradle nettoyé"
+
     - name: Configure Buildozer
       run: |
         if [ ! -f buildozer.spec ]; then
